@@ -17,4 +17,4 @@ const signOut = async (req: Request, res: Response) => {
   }
 };
 
-export {signOut};
+export { signOut };

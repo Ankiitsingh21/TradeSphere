@@ -20,17 +20,15 @@ router.post(
   signUp,
 );
 
+router.post("/users/sign-out", signOut);
 
-router.post('/users/sign-out',signOut);
-
-
-router.get('/users/current-user',currentUser,(req,res)=>{
-  res.send({currentUser:req.currentUser || null});
+router.get("/users/current-user", currentUser, (req, res) => {
+  res.send({ currentUser: req.currentUser || null });
 });
 
 router.post(
-  '/users/sign-in',
-   [
+  "/users/sign-in",
+  [
     body("email").isEmail().withMessage("Email must be valid"),
     body("password")
       .trim()
@@ -38,7 +36,7 @@ router.post(
       .withMessage("Password must be between 4 and 20"),
   ],
   validateRequest,
-  SignIn
-)
+  SignIn,
+);
 
 export default router;
