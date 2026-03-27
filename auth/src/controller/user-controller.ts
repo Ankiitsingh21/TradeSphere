@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import UserService from "../services/user-service";
+import UserService from "../services/sign-up";
 import { CustomError } from "@showsphere/common";
 
 const userService = new UserService();
@@ -10,11 +10,14 @@ const signUp = async (req: Request, res: Response) => {
 
     const user = await userService.signup(email, password);
     // console.log(user);
+    req.session = {
+      jwt: user.userJwt,
+    };
     return res.status(201).json({
-          success: true,
-          data : user,
-          message: "Successfully created a new User"
-  })
+      success: true,
+      data: user.userJwt,
+      message: "Successfully created a new User",
+    });
   } catch (error) {
     if (error instanceof CustomError) {
       return res.status(error.statusCode).send({

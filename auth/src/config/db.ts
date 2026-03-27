@@ -13,10 +13,10 @@ export const connectDB = async () => {
       console.log("MongoDB Connected");
       return;
     } catch (error) {
-      console.log(`Mongo connection failed. Attempt ${i}`,error);
+      console.log(`Mongo connection failed. Attempt ${i}`, error);
 
       if (i === MAX_RETRIES) {
-        throw error; 
+        throw error;
       }
 
       await new Promise((res) => setTimeout(res, 5000));
