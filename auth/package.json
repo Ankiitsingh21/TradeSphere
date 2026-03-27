@@ -14,6 +14,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@showsphere/common": "^3.0.26",
     "express": "^5.2.1"
   }
 }
