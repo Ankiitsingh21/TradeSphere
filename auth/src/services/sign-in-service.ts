@@ -1,6 +1,6 @@
 import { BadRequestError } from "@showsphere/common";
 import { User } from "../models/user";
-import { Password } from "../config/password";
+import { Password } from "../middlewares/password";
 import jwt from "jsonwebtoken";
 
 class SignInService {
