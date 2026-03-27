@@ -6,7 +6,7 @@ import { validateRequest } from '@showsphere/common';
 const router = express.Router();
 
 router.post(
-        '/sign-up',
+        '/user/sign-up',
         [
           body("email").isEmail().withMessage("Email must be valid"),
           body("password")

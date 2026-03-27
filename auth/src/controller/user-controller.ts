@@ -9,7 +9,7 @@ const signUp = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     const user = await userService.signup(email, password);
-    console.log(user);
+    // console.log(user);
     return res.status(201).json({
           success: true,
           data : user,
@@ -23,7 +23,7 @@ const signUp = async (req: Request, res: Response) => {
         errors: error.serializeErrors(),
       });
     }
-    console.log(error);
+    // console.log(error);
     return res.status(400).send({
       success: false,
       message: "Something went wrong at controller layer ",

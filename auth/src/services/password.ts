@@ -4,18 +4,16 @@ import { promisify } from "util";
 const scryptPassword = promisify(scrypt);
 
 export class Password{
-        static async toHash(password:string){
+        static async toHash(password:string) {
                 const salt = randomBytes(8).toString('hex');
                 const buff = (await scryptPassword(password,salt,64)) as Buffer;
-
-                console.log(buff);
-                return `${buff.toString("hex")}.${salt}`;
+                return `${buff.toString('hex')}.${salt}`
         }
 
-        static async compare(storedPassword:string,encryptedPassword:string){
+        static async compare(storedPassword:string,userPassword:string){
                 const [hashedPassword,salt] = storedPassword.split(".");
-                const buff = (await scryptPassword(encryptedPassword,salt,64))as Buffer;
+                const buff = (await scryptPassword(userPassword,salt,64))as Buffer;
 
-                return buff.toString('hex') === hashedPassword;
+                return buff.toString('hex')===hashedPassword;
         }
 }
