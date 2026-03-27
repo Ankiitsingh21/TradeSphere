@@ -20,7 +20,7 @@ app.use(errorHandler);
 
 
 const start = async () => {
-  process.env.MONGO_URI="mongodb://localhost:27017/auth";
+  // process.env.MONGO_URI="mongodb://localhost:27017/auth";
 
   await connectDB();
 
