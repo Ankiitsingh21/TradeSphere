@@ -8,7 +8,7 @@ import { SignIn } from "../../controller/sign-in-controller";
 const router = express.Router();
 
 router.post(
-  "/users/sign-up",
+  "/sign-up",
   [
     body("email").isEmail().withMessage("Email must be valid"),
     body("password")
@@ -20,14 +20,14 @@ router.post(
   signUp,
 );
 
-router.post("/users/sign-out", signOut);
+router.post("/sign-out", signOut);
 
-router.get("/users/current-user", currentUser, (req, res) => {
+router.get("/current-user", currentUser, (req, res) => {
   res.send({ currentUser: req.currentUser || null });
 });
 
 router.post(
-  "/users/sign-in",
+  "/sign-in",
   [
     body("email").isEmail().withMessage("Email must be valid"),
     body("password")

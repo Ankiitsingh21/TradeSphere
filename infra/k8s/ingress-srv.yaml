@@ -10,14 +10,14 @@ spec:
     - host: sphere.dev
       http:
         paths:
-          - path: /api/?(.*)
+          - path: /api/users/?(.*)
             pathType: ImplementationSpecific
             backend:
               service:
                 name: auth-srv
                 port:
                   number: 3000
-          - path: /api/?(.*)
+          - path: /api/wallet/?(.*)
             pathType: ImplementationSpecific
             backend:
               service:
