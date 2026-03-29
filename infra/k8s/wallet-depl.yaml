@@ -15,14 +15,14 @@ spec:
       containers:
         - name: wallet
           image: ankiitsingh21/wallet
-          env: 
-            - name: MONGO_URI
-              value: mongodb://mongo-wallet-srv:27017/wallet
+          env:
+            - name: DATABASE_URL
+              value: postgres://postgres:postgres@postgres-wallet-srv:5432/wallet
             - name: JWT_KEY
-              valueFrom: 
-                 secretKeyRef:
-                     name: jwt-secret
-                     key: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
 ---
 apiVersion: v1
 kind: Service

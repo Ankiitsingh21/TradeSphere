@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wallet-postgres-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wallet-postgres
+  template:
+    metadata:
+      labels:
+        app: wallet-postgres
+    spec:
+      containers:
+        - name: wallet-postgres
+          image: postgres
+          env:
+            - name: POSTGRES_DB
+              value: wallet
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-wallet-srv
+spec:
+  selector:
+    app: wallet-postgres
+  ports:
+    - name: db
+      protocol: TCP
+      port: 5432
+      targetPort: 5432
