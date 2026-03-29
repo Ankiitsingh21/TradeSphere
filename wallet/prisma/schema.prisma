@@ -11,3 +11,40 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+
+enum TransactionType {
+  ADD
+  CREDIT
+  DEBIT
+  LOCK
+  UNLOCK
+  SETTLE
+}
+
+model wallet{
+  id String @id @default(uuid())
+  userId String
+  total_balance Decimal
+  available_balance Decimal
+  locked_balance Decimal
+  version Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions      transactions[]
+}
+
+
+model transactions{
+  id String  @id @default(uuid())
+  userId String
+  walletId String
+  wallet wallet @relation(fields: [walletId],references: [id])
+
+  type TransactionType
+
+  amount Decimal
+
+  createdAt DateTime @default(now())
+}
