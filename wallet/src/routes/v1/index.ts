@@ -4,6 +4,7 @@ import { body } from "express-validator";
 import { createWallet } from "../../controller/createWallet-controller";
 import { addMoney } from "../../controller/add-money-controller";
 import { getMoney } from "../../controller/get-money-controller";
+import { withdrawMoney } from "../../controller/withdraw-money-controller";
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.post(
   createWallet,
 );
 
-router.post(
+router.patch(
   "/add-money",
   requireAuth,
   [
@@ -30,5 +31,13 @@ router.post(
 );
 
 router.get("/check-balance", requireAuth, getMoney);
+
+router.patch(
+  "/withdraw",
+  requireAuth,
+  [body("amount").isFloat({ gt: 0 }).withMessage("amount can not be negative")],
+  validateRequest,
+  withdrawMoney
+);
 
 export default router;
