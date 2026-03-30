@@ -3,14 +3,14 @@ import { prisma } from "../config/db";
 
 export const createwallet = async (userId: string) => {
   try {
-    console.log(userId);
+    // console.log(userId);
     const user = await prisma.wallet.create({
       data: {
         userId: userId,
       },
     });
 
-    console.log("wallet craeted ");
+    // console.log("wallet craeted ");
     return user;
   } catch (error) {
     console.log(error);

@@ -5,4 +5,4 @@ COPY package.json .
 RUN npm install
 COPY . .
 RUN npx prisma generate  
-CMD ["npm", "start"]
+CMD ["sh","-c","npx prisma migrate deploy  && npm start"]
