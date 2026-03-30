@@ -4,19 +4,19 @@ import { addmoney } from "../services/addMoney";
 
 export const addMoney = async (req: Request, res: Response) => {
   try {
-        console.log("hello");
+    // console.log("hello");
     const { walletID, amount } = req.body;
-    console.log(req.currentUser)
+    //     console.log(req.currentUser)
     //        const {userID}
-//     const userID = req.currentUser!.id;
-//     if (typeof userID !== "string") {
-//       throw new BadRequestError("userID is incorrect");
-//     }
-//     console.log(userID);
-//     const add = await addmoney(userID, walletID, amount);
+    const userID = req.currentUser!.id;
+    if (typeof userID !== "string") {
+      throw new BadRequestError("userID is incorrect");
+    }
+    //     console.log(userID);
+    const add = await addmoney(userID, walletID, amount);
     return res.status(201).json({
       success: true,
-//       data: add,
+      data: add,
       message: "Successfully added a money into wallet",
     });
   } catch (error) {

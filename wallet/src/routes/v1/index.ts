@@ -13,12 +13,19 @@ router.post(
   createWallet,
 );
 
-router.post("/add-money", [
-  body("walletID").notEmpty().withMessage("wallet id must not be empty "),
-  body("amount")
-          .notEmpty().withMessage("amount can not be NULL")
-          .isFloat({gt:0}).withMessage("amount can not be negative")
-
-],validateRequest,requireAuth,addMoney);
+router.post(
+  "/add-money",
+  [
+    body("walletID").notEmpty().withMessage("wallet id must not be empty "),
+    body("amount")
+      .notEmpty()
+      .withMessage("amount can not be NULL")
+      .isFloat({ gt: 0 })
+      .withMessage("amount can not be negative"),
+  ],
+  validateRequest,
+  requireAuth,
+  addMoney,
+);
 
 export default router;
