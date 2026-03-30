@@ -6,7 +6,8 @@ export const addmoney = async (
   userID: string,
   amount: number,
 ) => {
-  try {
+        console.log(userID);
+        console.log(walletID);
     const userWallet = await prisma.wallet.findFirst({
       where: {
         id: walletID,
@@ -14,6 +15,7 @@ export const addmoney = async (
       },
     });
 
+//     console.log(userWallet);
     if (!userWallet) {
       throw new BadRequestError("wallet has not been found");
     }
@@ -42,10 +44,7 @@ export const addmoney = async (
     });
 
     return createtransactions;
-  } catch (error) {
-    console.log(error);
-    throw new BadRequestError("Not able to add Money  at service layer");
-  }
+  
 };
 
 // model transactions{

@@ -12,7 +12,6 @@ export const addMoney = async (req: Request, res: Response) => {
     if (typeof userID !== "string") {
       throw new BadRequestError("userID is incorrect");
     }
-    //     console.log(userID);
     const add = await addmoney(userID, walletID, amount);
     return res.status(201).json({
       success: true,

@@ -15,6 +15,7 @@ router.post(
 
 router.post(
   "/add-money",
+  requireAuth,
   [
     body("walletID").notEmpty().withMessage("wallet id must not be empty "),
     body("amount")
@@ -24,7 +25,6 @@ router.post(
       .withMessage("amount can not be negative"),
   ],
   validateRequest,
-  requireAuth,
   addMoney,
 );
 
