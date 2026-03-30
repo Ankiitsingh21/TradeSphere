@@ -15,6 +15,7 @@ datasource db {
 
 enum TransactionType {
   ADD
+  WITHDRAW
   CREDIT
   DEBIT
   LOCK
@@ -24,11 +25,11 @@ enum TransactionType {
 
 model wallet{
   id String @id @default(uuid())
-  userId String
-  total_balance Decimal
-  available_balance Decimal
-  locked_balance Decimal
-  version Int
+  userId String 
+  total_balance Decimal @default(0.0)
+  available_balance Decimal @default(0.0)
+  locked_balance Decimal @default(0.0)
+  version Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

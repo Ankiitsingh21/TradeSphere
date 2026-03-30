@@ -1,22 +1,14 @@
 import { Request, Response } from "express";
-import UserService from "../services/sign-up";
+import { createwallet } from "../services/createWallet";
 import { CustomError } from "@showsphere/common";
 
-const userService = new UserService();
-
-const signUp = async (req: Request, res: Response) => {
+export const createWallet = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-
-    const user = await userService.signup(email, password);
-    console.log(user);
-    req.session = {
-      jwt: user.userJwt,
-    };
+    const { userId } = req.body;
+    const wallet = await createwallet(userId);
     return res.status(201).json({
       success: true,
-      data: user.userJwt,
-      // userID: user.i
+      data: wallet,
       message: "Successfully created a new User",
     });
   } catch (error) {
@@ -35,5 +27,3 @@ const signUp = async (req: Request, res: Response) => {
     });
   }
 };
-
-export { signUp };
