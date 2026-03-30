@@ -1,6 +1,6 @@
 import express from "express";
 import api from "./routes/index";
-import { errorHandler, NotFoundError } from "@showsphere/common";
+import { currentUser, errorHandler } from "@showsphere/common";
 import cookieSession from "cookie-session";
 
 const app = express();
@@ -15,6 +15,7 @@ app.use(
     secure: process.env.NODE_ENV !== "test",
   }),
 );
+app.use(currentUser);
 
 app.use("/api", api);
 

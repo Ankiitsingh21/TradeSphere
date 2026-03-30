@@ -9,7 +9,7 @@ export const createWallet = async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       data: wallet,
-      message: "Successfully created a new User",
+      message: "Successfully created a wallet",
     });
   } catch (error) {
     if (error instanceof CustomError) {
