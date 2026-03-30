@@ -12,10 +12,11 @@ export const addMoney = async (req: Request, res: Response) => {
     if (typeof userID !== "string") {
       throw new BadRequestError("userID is incorrect");
     }
-    const add = await addmoney(userID, walletID, amount);
+    const add = await addmoney(walletID, userID, amount);
     return res.status(201).json({
       success: true,
-      data: add,
+      data: add.createtransactions,
+      currntBalance: add.addmoney,
       message: "Successfully added a money into wallet",
     });
   } catch (error) {
