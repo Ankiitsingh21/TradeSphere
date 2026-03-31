@@ -6,9 +6,9 @@ export const addmoney = async (
   userID: string,
   amount: number,
 ) => {
-  //         console.log("walletID:", walletID);
-  // console.log("userID:", userID);
-  // console.log("types:", typeof walletID, typeof userID);
+          console.log("walletID:", walletID);
+  console.log("userID:", userID);
+  console.log("types:", typeof walletID, typeof userID);
   const userWallet = await prisma.wallet.findFirst({
     where: {
       id: walletID,
@@ -16,7 +16,7 @@ export const addmoney = async (
     },
   });
 
-  //     console.log(userWallet);
+      console.log(userWallet);
   if (!userWallet) {
     throw new BadRequestError("wallet has not been found");
   }

@@ -5,6 +5,7 @@ import { createWallet } from "../../controller/createWallet-controller";
 import { addMoney } from "../../controller/add-money-controller";
 import { getMoney } from "../../controller/get-money-controller";
 import { withdrawMoney } from "../../controller/withdraw-money-controller";
+import { lockMoney } from "../../controller/lock-money-controller";
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.post(
 
 router.patch(
   "/add-money",
-  requireAuth,
+  // requireAuth,
   [
     body("walletID").notEmpty().withMessage("wallet id must not be empty "),
     body("amount")
@@ -37,7 +38,15 @@ router.patch(
   requireAuth,
   [body("amount").isFloat({ gt: 0 }).withMessage("amount can not be negative")],
   validateRequest,
-  withdrawMoney
+  withdrawMoney,
+);
+
+router.patch(
+  "/lock-money",
+  requireAuth,
+  [body("amount").isFloat({ gt: 0 }).withMessage("amount can not be negative")],
+  validateRequest,
+  lockMoney,
 );
 
 export default router;
