@@ -18,7 +18,7 @@ router.post(
 
 router.patch(
   "/add-money",
-  // requireAuth,
+  requireAuth,
   [
     body("walletID").notEmpty().withMessage("wallet id must not be empty "),
     body("amount")

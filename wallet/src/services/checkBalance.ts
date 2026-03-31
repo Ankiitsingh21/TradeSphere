@@ -9,7 +9,7 @@ export const checkbalance = async (userID: string) => {
   });
 
   if (!balance) {
-    throw new BadRequestError("the user has not been found");
+    throw new BadRequestError("the wallet has not been found");
   }
 
   return balance;
