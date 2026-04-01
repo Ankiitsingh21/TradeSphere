@@ -6,8 +6,8 @@ const start = async () => {
   if (!process.env.JWT_KEY) {
     throw new Error("JWT_KEY must be defined");
   }
-  if (!process.env.DATABASE_URL) {
-    throw new Error("incorrect database url");
+  if (!process.env.MONGO_URI) {
+    throw new Error("incorrect MONGO url");
   }
   if (!process.env.NATS_CLIENT_ID) {
     throw new Error("NATS_CLIENT_ID is incorrect");
@@ -36,7 +36,8 @@ const start = async () => {
     process.on("SIGINT", () => natsWrapper.client.close());
     process.on("SIGTERM", () => natsWrapper.client.close());
   } catch (error) {
-    return ;
+    console.error("NATS connection failed, exiting", error);
+    process.exit(1);
   }
 
   app.listen(3000, () => {

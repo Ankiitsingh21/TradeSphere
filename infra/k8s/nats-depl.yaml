@@ -22,7 +22,7 @@ spec:
             '-hbt', '5s',
             '-hbf', '2',
             '-SD',
-            '-cid', 'ticketing'
+            '-cid', 'tradesphere'
           ]
 
 ---
