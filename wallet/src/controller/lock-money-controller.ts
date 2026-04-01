@@ -9,8 +9,8 @@ export const lockMoney = async (req: Request, res: Response) => {
     const lock = await lockmoney(userID, amount);
     return res.status(201).json({
       success: true,
-      data: lock,
-      currntBalance: lock.total_balance,
+      data: lock.tranc,
+      currntBalance: lock.update,
       message: "Successfully locked a money into wallet",
     });
   } catch (error) {

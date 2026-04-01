@@ -2,41 +2,53 @@ import { BadRequestError } from "@showsphere/common";
 import { prisma } from "../config/db";
 
 export const lockmoney = async (userID: string, amount: number) => {
-  const wallet = await prisma.wallet.findUnique({
-    where: {
-      userId: userID,
-    },
-  });
-  if (!wallet) {
-    throw new BadRequestError("wallet not found");
-  }
-
-  const available = wallet.available_balance.toNumber();
-  const locked = wallet.locked_balance.toNumber();
-
-  if (amount > available) {
-    throw new BadRequestError("Insuffuicient fund can not lock amount");
-  }
-
-  // const total =
-  const newAvailable = available - amount;
-  const newLocked = locked + amount;
-  const newTotal = newAvailable + newLocked;
-  const update = await prisma.wallet.update({
-    where: {
-      id: wallet.id,
-    },
-    data: {
-      locked_balance: newLocked,
-      available_balance: newAvailable,
-      total_balance: newTotal,
-      version: {
-        increment: 1,
+  const lock = await prisma.$transaction(async (tx) => {
+    const wallet = await tx.wallet.findUnique({
+      where: {
+        userId: userID,
       },
-    },
-  });
+    });
+    if (!wallet) {
+      throw new BadRequestError("wallet not found");
+    }
 
-  return update;
+    const available = wallet.available_balance.toNumber();
+    const locked = wallet.locked_balance.toNumber();
+
+    if (amount > available) {
+      throw new BadRequestError("Insuffuicient fund can not lock amount");
+    }
+
+    // const total =
+    const newAvailable = available - amount;
+    const newLocked = locked + amount;
+    const newTotal = newAvailable + newLocked;
+    const update = await tx.wallet.update({
+      where: {
+        id: wallet.id,
+      },
+      data: {
+        locked_balance: newLocked,
+        available_balance: newAvailable,
+        total_balance: newTotal,
+        version: {
+          increment: 1,
+        },
+      },
+    });
+
+    const tranc = await tx.transactions.create({
+      data: {
+        type: "LOCK",
+        amount: amount,
+        userId: wallet.userId,
+        walletId: wallet.id,
+      },
+    });
+
+    return { tranc, update };
+  });
+  return lock;
 };
 
 // model wallet{

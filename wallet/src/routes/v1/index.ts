@@ -53,7 +53,9 @@ router.patch(
 router.patch(
   "/settle-money",
   requireAuth,
-  [body("amount").isFloat({ gt: 0 }).withMessage("amount can not be negative")],
+  [body("settleamount").isFloat({ gt: 0 }).withMessage("amount can not be negative"),
+   body("releaseamount").isFloat({ gt: 0 }).withMessage("amount can not be negative")
+  ],
   validateRequest,
   settleMoney,
 );

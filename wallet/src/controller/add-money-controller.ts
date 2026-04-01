@@ -9,7 +9,7 @@ export const addMoney = async (req: Request, res: Response) => {
     // console.log(req.currentUser)
     //        const {userID}
     const userID = req.currentUser!.id;
-    const add = await addmoney(walletID, userID, amount);
+    const add = await addmoney(userID, amount);
     return res.status(201).json({
       success: true,
       data: add.createtransactions,
