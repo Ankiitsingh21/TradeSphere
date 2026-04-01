@@ -25,7 +25,7 @@ class UserService {
       process.env.JWT_KEY!,
     );
 
-    new UserCreatedPublisher(natsWrapper.client).publish({
+    await new UserCreatedPublisher(natsWrapper.client).publish({
       userID:user.id
     })
 

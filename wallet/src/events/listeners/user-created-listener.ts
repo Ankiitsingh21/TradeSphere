@@ -12,6 +12,7 @@ export class UserCreatedListener extends Listener<UserCreatedEvent> {
                         await createwallet(data.userID);
                         return msg.ack();
                 } catch (error) {
+                        console.error("UserCreatedListener failed", error)
                         return;
                 }
         }

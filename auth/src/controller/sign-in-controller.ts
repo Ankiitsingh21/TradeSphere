@@ -8,6 +8,9 @@ const SignIn = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     const data = await signIn.signIn(email, password);
+    req.session = {
+      jwt: data,
+    };
     return res.status(201).json({
       success: true,
       data: data,
