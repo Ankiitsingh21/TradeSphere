@@ -9,7 +9,7 @@ const signUp = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     const user = await userService.signup(email, password);
-    console.log(user);
+    // console.log(user);
     req.session = {
       jwt: user.userJwt,
     };

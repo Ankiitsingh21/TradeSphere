@@ -4,8 +4,12 @@ import { prisma } from "../config/db";
 export const createwallet = async (userId: string) => {
   try {
     // console.log(userId);
-    const user = await prisma.wallet.create({
-      data: {
+    const user = await prisma.wallet.upsert({
+      where:{
+        userId:userId
+      },
+      update:{},
+      create: {
         userId: userId,
       },
     });
