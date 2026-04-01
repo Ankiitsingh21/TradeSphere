@@ -16,6 +16,16 @@ spec:
         - name: wallet
           image: ankiitsingh21/wallet
           env:
+            - name: NATS_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            - name: NATS_URL
+              value: "http://nats-srv:4222"
+
+            - name: NATS_CLUSTER_ID
+              value: tradesphere
             - name: DATABASE_URL
               value: postgres://postgres:postgres@postgres-wallet-srv:5432/wallet
             - name: JWT_KEY
