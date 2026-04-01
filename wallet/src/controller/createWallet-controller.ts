@@ -4,7 +4,7 @@ import { CustomError } from "@showsphere/common";
 
 export const createWallet = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.body;
+    const  userId  = req.currentUser!.id;
     const wallet = await createwallet(userId);
     return res.status(201).json({
       success: true,

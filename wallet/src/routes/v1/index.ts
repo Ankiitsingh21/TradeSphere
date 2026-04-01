@@ -12,7 +12,6 @@ const router = express.Router();
 
 router.post(
   "/create",
-  requireAuth,
   [body("userId").notEmpty().withMessage("userID is required")],
   validateRequest,
   createWallet,
