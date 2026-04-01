@@ -21,7 +21,6 @@ router.patch(
   "/add-money",
   requireAuth,
   [
-    body("walletID").notEmpty().withMessage("wallet id must not be empty "),
     body("amount")
       .notEmpty()
       .withMessage("amount can not be NULL")
@@ -37,7 +36,7 @@ router.get("/check-balance", requireAuth, getMoney);
 router.patch(
   "/withdraw",
   requireAuth,
-  [body("amount").isFloat({ gt: 0 }).withMessage("amount can not be negative")],
+  [body("amount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative")],
   validateRequest,
   withdrawMoney,
 );
@@ -45,7 +44,7 @@ router.patch(
 router.patch(
   "/lock-money",
   requireAuth,
-  [body("amount").isFloat({ gt: 0 }).withMessage("amount can not be negative")],
+  [body("amount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative")],
   validateRequest,
   lockMoney,
 );
@@ -53,8 +52,8 @@ router.patch(
 router.patch(
   "/settle-money",
   requireAuth,
-  [body("settleamount").isFloat({ gt: 0 }).withMessage("amount can not be negative"),
-   body("releaseamount").isFloat({ gt: 0 }).withMessage("amount can not be negative")
+  [body("settleamount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative"),
+   body("releaseamount").isFloat().notEmpty().withMessage("amount can not be empty")
   ],
   validateRequest,
   settleMoney,

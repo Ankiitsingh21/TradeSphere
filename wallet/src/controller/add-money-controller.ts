@@ -5,7 +5,7 @@ import { addmoney } from "../services/addMoney";
 export const addMoney = async (req: Request, res: Response) => {
   try {
     // console.log("hello");
-    const { walletID, amount } = req.body;
+    const {  amount } = req.body;
     // console.log(req.currentUser)
     //        const {userID}
     const userID = req.currentUser!.id;
