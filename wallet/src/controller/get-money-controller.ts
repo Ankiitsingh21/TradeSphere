@@ -10,7 +10,7 @@ export const getMoney = async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       balance: balance,
-      message: "Successfully added a money into wallet",
+      message: "Successfully fetch  a money from wallet",
     });
   } catch (error) {
     if (error instanceof CustomError) {

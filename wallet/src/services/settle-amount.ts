@@ -1,51 +1,46 @@
 import { BadRequestError } from "@showsphere/common";
-import { prisma } from "../config/db"
+import { prisma } from "../config/db";
 
+export const settlemoney = async (userID: string, amount: number) => {
+  const wallet = await prisma.wallet.findUnique({
+    where: {
+      userId: userID,
+    },
+  });
 
+  if (!wallet) {
+    throw new BadRequestError("Wallet not found");
+  }
 
-export const settle = async(userID:string,amount:number)=>{
-        const wallet = await prisma.wallet.findUnique({
-                where:{
-                        userId:userID
-                }
-        });
+  const availb = wallet.available_balance.toNumber();
+  const totalb = wallet.total_balance.toNumber();
+  const lockb = wallet.locked_balance.toNumber();
 
-        if(!wallet){
-                throw new BadRequestError("Wallet not found");
-        }
+  if (amount > lockb) {
+    throw new BadRequestError("loacked balance is inusfficient");
+  }
 
-        
-        const availb= wallet.available_balance.toNumber();
-        const totalb= wallet.total_balance.toNumber();
-        const lockb= wallet.locked_balance.toNumber();
+  const newL = lockb - amount;
+  const newT = availb + newL;
 
-        if(amount>lockb){
-                throw new BadRequestError("loacked balance is inusfficient");
-        }
+  const update = await prisma.wallet.update({
+    where: {
+      id: wallet.id,
+    },
+    data: {
+      locked_balance: newL,
+      total_balance: newT,
+    },
+  });
 
-        const newL = lockb-amount;
-        const newT = availb+newL;
+  const tranc = await prisma.transactions.create({
+    data: {
+      walletId: wallet.id,
+      userId: wallet.userId,
+      amount: amount,
+      type: "SETTLE",
+    },
+  });
 
-
-        const update = await prisma.wallet.update({
-                where:{
-                        id: wallet.id
-                },data:{
-                        locked_balance:newL,
-                        total_balance:newT
-                }
-        });
-
-
-        const tranc = await prisma.transactions.create({
-                data:{
-                        walletId:wallet.id,
-                        userId:wallet.userId,
-                        amount:amount,
-                        type:"SETTLE"
-                }
-        })
-
-        return update;
-        
-}
+  return { tranc, update };
+};

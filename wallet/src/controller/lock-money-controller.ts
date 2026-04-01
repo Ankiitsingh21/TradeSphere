@@ -11,7 +11,7 @@ export const lockMoney = async (req: Request, res: Response) => {
       success: true,
       data: lock,
       currntBalance: lock.total_balance,
-      message: "Successfully added a money into wallet",
+      message: "Successfully locked a money into wallet",
     });
   } catch (error) {
     if (error instanceof CustomError) {

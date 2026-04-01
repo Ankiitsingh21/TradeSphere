@@ -6,6 +6,7 @@ import { addMoney } from "../../controller/add-money-controller";
 import { getMoney } from "../../controller/get-money-controller";
 import { withdrawMoney } from "../../controller/withdraw-money-controller";
 import { lockMoney } from "../../controller/lock-money-controller";
+import { settleMoney } from "../../controller/settle-money-controller";
 
 const router = express.Router();
 
@@ -47,6 +48,14 @@ router.patch(
   [body("amount").isFloat({ gt: 0 }).withMessage("amount can not be negative")],
   validateRequest,
   lockMoney,
+);
+
+router.patch(
+  "/settle-money",
+  requireAuth,
+  [body("amount").isFloat({ gt: 0 }).withMessage("amount can not be negative")],
+  validateRequest,
+  settleMoney,
 );
 
 export default router;

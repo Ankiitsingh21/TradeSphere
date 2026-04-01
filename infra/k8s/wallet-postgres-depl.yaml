@@ -1,7 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: tradesphere
   name: wallet-postgres-depl
 spec:
   replicas: 1
@@ -29,7 +28,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: tradesphere
   name: postgres-wallet-srv
 spec:
   selector:
