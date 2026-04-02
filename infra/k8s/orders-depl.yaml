@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: orders-depl
+  name: order-depl
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: orders
+      app: order
   template:
     metadata:
       labels:
-        app: orders
+        app: order
     spec:
       containers:
-        - name: orders
-          image: ankiitsingh21/orders
+        - name: order
+          image: ankiitsingh21/order
           env:
             - name: NATS_CLIENT_ID
               valueFrom:
@@ -27,7 +27,7 @@ spec:
             - name: NATS_CLUSTER_ID
               value: tradesphere
             - name: DATABASE_URL
-              value: postgres://postgres:postgres@postgres-orders-srv:5432/orders
+              value: postgres://postgres:postgres@postgres-order-srv:5432/order
             - name: JWT_KEY
               valueFrom:
                 secretKeyRef:
@@ -37,12 +37,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: orders-srv
+  name: order-srv
 spec:
   selector:
-    app: orders
+    app: order
   ports:
-    - name: orders
+    - name: order
       protocol: TCP
       port: 3000
       targetPort: 3000

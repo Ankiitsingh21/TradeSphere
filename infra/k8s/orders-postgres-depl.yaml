@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: orders-postgres-depl
+  name: order-postgres-depl
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: orders-postgres
+      app: order-postgres
   template:
     metadata:
       labels:
-        app: orders-postgres
+        app: order-postgres
     spec:
       containers:
-        - name: orders-postgres
+        - name: order-postgres
           image: postgres
           env:
             - name: POSTGRES_DB
-              value: orders
+              value: order
             - name: POSTGRES_USER
               value: postgres
             - name: POSTGRES_PASSWORD
@@ -28,10 +28,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres-orders-srv
+  name: postgres-order-srv
 spec:
   selector:
-    app: orders-postgres
+    app: order-postgres
   ports:
     - name: db
       protocol: TCP
