@@ -19,7 +19,7 @@ const start = async () => {
     throw new Error("NATS_URL is incorrect");
   }
 
-  // await connectDB();
+  await connectDB();
 
   try {
     await natsWrapper.connect(
