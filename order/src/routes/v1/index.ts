@@ -1,6 +1,7 @@
 import { requireAuth } from "@showsphere/common";
 import express from "express";
 import { body } from "express-validator";
+import { buyController } from "../../controller/buy-controller";
 
 const router = express.Router();
 
@@ -10,6 +11,6 @@ router.post("/buy", requireAuth, [
     .isInt({ gt: 0 })
     .notEmpty()
     .withMessage("the number of stocks can not be null"),
-]);
+],buyController);
 
 export default router;

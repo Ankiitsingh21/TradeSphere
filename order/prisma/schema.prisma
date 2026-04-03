@@ -30,7 +30,7 @@ model order {
   type       OrderType
   status     OrderStatus
   quantity   Decimal
-  resolved   Decimal
+  resolved   Decimal?
   price      Decimal
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
