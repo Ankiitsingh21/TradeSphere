@@ -30,26 +30,6 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
 //   console.log(order);
   const lockamount = price * quantity;
 
-//   const response = await axios({
-//     method: "patch",
-//     url: "http://wallet-srv:3000/api/wallet/lock-money",
-//     data: {
-//       userID:userID,
-//       amount: lockamount,
-//     },
-//   });
-
-//   console.log(response.data);
-//   if(response.data.success===false){
-//         const o = await prisma.order.update({
-//                 where:{
-//                         id:order.id
-//                 },data:{
-//                         status:"FAILED"
-//                 }
-//         })
-//         throw new BadRequestError("Not able to lock money");
-//   }
 let data ,status;
   try {
   const response = await axios({
@@ -96,21 +76,56 @@ if(status!==201){
   throw new BadRequestError(data);
 }
 
-console.log(data," ",status);
-  return "route is correct";
+// console.log(data," ",status);
+
+
+///now the locking money part is done now move on to the hit the matching engine for now just pass alll the quantity as true okey
+
+const { data:settleData,status:settleStatus } = await callWalletService(
+  "http://wallet-srv:3000/api/wallet/settle-money",
+  {
+    userID,
+    settleamount: lockamount,
+    releaseamount: 0,
+  }
+);
+
+// console.log(settleData," ",settleStatus);
+if(!settleStatus || settleStatus!==201 ){
+   throw new BadRequestError("problem in settling money");
+}
+
+const final = await prisma.order.update({
+  where:{
+    id:order.id
+  },data:{
+    status:"SUCCESS",
+    resolved:lockamount
+  }
+})
+
+  return final;
 
 
 };
 
-// model order {
-//   id         String      @id @default(uuid())
-//   userId     String
-//   symbol     String
-//   type       OrderType
-//   status     OrderStatus
-//   quantity   Decimal
-//   resolved   Decimal
-//   price      Decimal
-//   createdAt  DateTime    @default(now())
-//   updatedAt  DateTime    @updatedAt
-// }
+const callWalletService = async (url: string, payload: any) => {
+  try {
+    const response = await axios({
+      method: "patch",
+      url,
+      data: payload,
+    });
+
+    return {
+      data: response.data,
+      status: response.status,
+    };
+  } catch (error: any) {
+    return {
+      data: error.response?.data,
+      status: error.response?.status,
+    };
+  }
+};
+

@@ -53,9 +53,10 @@ router.patch(
 
 router.patch(
   "/settle-money",
-  requireAuth,
+  // requireAuth,
   [body("settleamount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative"),
-   body("releaseamount").isFloat().notEmpty().withMessage("amount can not be empty")
+   body("releaseamount").isFloat().notEmpty().withMessage("amount can not be empty"),
+   body("userID").notEmpty().withMessage("user ID must be present")
   ],
   validateRequest,
   settleMoney,

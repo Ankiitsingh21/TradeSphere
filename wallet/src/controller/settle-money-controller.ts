@@ -4,14 +4,14 @@ import { settlemoney } from "../services/settle-amount";
 
 export const settleMoney = async (req: Request, res: Response) => {
   try {
-    const userID = req.currentUser!.id;
-    const { settleamount, releaseamount } = req.body;
+    // const userID = req.currentUser!.id;
+    const { settleamount, releaseamount ,userID} = req.body;
     const settle = await settlemoney(userID, settleamount, releaseamount);
     return res.status(201).json({
       success: true,
       data: settle.tranc,
       currntBalance: settle.update,
-      message: "Successfully withdraw  a money from wallet",
+      message: "Successfully settle  a money from wallet",
     });
   } catch (error) {
     if (error instanceof CustomError) {
