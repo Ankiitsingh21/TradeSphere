@@ -24,7 +24,7 @@ spec:
                 name: wallet-srv
                 port:
                   number: 3000
-          - path: /api/order/?(.*)
+          - path: /api/orders/?(.*)
             pathType: ImplementationSpecific
             backend:
               service:

@@ -6,10 +6,11 @@ export const buyController = async (req: Request, res: Response) => {
   try {
     const userID = req.currentUser!.id;
     const { symbol, quantity } = req.body;
+//     console.log(userID,symbol,quantity);
     const resp = await buy(userID, symbol, quantity);
     return res.status(201).json({
       success: true,
-      data: resp,
+      data: "",
       message: "Successfully added a money into wallet",
     });
   } catch (error) {

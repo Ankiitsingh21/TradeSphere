@@ -10,7 +10,9 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
   };
   const price = fetch.price;
 
+//   console.log(price);
   if (!fetch || !price) {
+        console.log("error");
     throw new BadRequestError("not able to fetch the latest price of stock ");
   }
 
