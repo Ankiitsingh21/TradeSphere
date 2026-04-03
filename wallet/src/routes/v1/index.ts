@@ -43,8 +43,10 @@ router.patch(
 
 router.patch(
   "/lock-money",
-  requireAuth,
-  [body("amount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative")],
+  // requireAuth,
+  [body("amount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative"),
+    body("userID").notEmpty().withMessage("user ID must be present")
+  ],
   validateRequest,
   lockMoney,
 );

@@ -4,8 +4,8 @@ import { lockmoney } from "../services/lockMoney";
 
 export const lockMoney = async (req: Request, res: Response) => {
   try {
-    const userID = req.currentUser!.id;
-    const { amount } = req.body;
+    // const userID = req.currentUser!.id;
+    const { userID,amount } = req.body;
     const lock = await lockmoney(userID, amount);
     return res.status(201).json({
       success: true,

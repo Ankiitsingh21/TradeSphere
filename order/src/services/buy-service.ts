@@ -30,15 +30,45 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
 //   console.log(order);
   const lockamount = price * quantity;
 
-  const req = await axios({
-    method: "post",
-    url: "http://sphere.dev/api/wallet/lock-money",
-    data: {
-      amount: lockamount,
-    },
-  });
+//   const response = await axios({
+//     method: "patch",
+//     url: "http://wallet-srv:3000/api/wallet/lock-money",
+//     data: {
+//       userID:userID,
+//       amount: lockamount,
+//     },
+//   });
 
-  console.log(req);
+//   console.log(response.data);
+//   if(response.data.success===false){
+//         const o = await prisma.order.update({
+//                 where:{
+//                         id:order.id
+//                 },data:{
+//                         status:"FAILED"
+//                 }
+//         })
+//         throw new BadRequestError("Not able to lock money");
+//   }
+//   try {
+//   const response = await axios({
+//     method: "patch",
+//     url: "http://wallet-srv:3000/api/wallet/lock-money",
+//     data: {
+//       userID:userID,
+//       amount: lockamount,
+//     },
+//   });
+
+  
+// //   console.log("status:", response.status);
+// //   console.log("data:", response.data);
+
+// } catch (error: any) {
+ 
+//   console.log("status:", error.response?.status);
+//   console.log("message:", error.response?.data);
+// }
 
   return "route is correct";
 };
