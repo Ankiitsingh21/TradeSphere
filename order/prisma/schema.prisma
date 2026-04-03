@@ -23,7 +23,7 @@ enum OrderType{
   SELL
 }
 
-model Order {
+model order {
   id         String      @id @default(uuid())
   userId     String
   symbol     String

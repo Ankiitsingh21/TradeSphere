@@ -35,8 +35,6 @@ const start = async () => {
 
     process.on("SIGINT", () => natsWrapper.client.close());
     process.on("SIGTERM", () => natsWrapper.client.close());
-
-
   } catch (error) {
     console.error("NATS connection failed, exiting", error);
     process.exit(1);
