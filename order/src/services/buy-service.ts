@@ -50,27 +50,56 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
 //         })
 //         throw new BadRequestError("Not able to lock money");
 //   }
-//   try {
-//   const response = await axios({
-//     method: "patch",
-//     url: "http://wallet-srv:3000/api/wallet/lock-money",
-//     data: {
-//       userID:userID,
-//       amount: lockamount,
-//     },
-//   });
+let data ,status;
+  try {
+  const response = await axios({
+    method: "patch",
+    url: "http://wallet-srv:3000/api/wallet/lock-money",
+    data: {
+      userID:userID,
+      amount: lockamount,
+    },
+  });
 
-  
-// //   console.log("status:", response.status);
-// //   console.log("data:", response.data);
+  data=response.data;
+  status=response.status
+  // console.log("status:", response.status);
+  // console.log("data:", response.data);
 
-// } catch (error: any) {
- 
-//   console.log("status:", error.response?.status);
-//   console.log("message:", error.response?.data);
-// }
+} catch (error: any) {
 
+  status= error.response?.status
+  data=error.response?.data
+  // console.log("status:", error.response?.status);
+  // console.log("message:", error.response?.data);
+}
+
+if(!status){
+   await prisma.order.update({
+                where:{
+                        id:order.id
+                },data:{
+                        status:"FAILED"
+                }
+        })
+  throw new BadRequestError("wallet is unreachable");
+}
+
+if(status!==201){
+  await prisma.order.update({
+                where:{
+                        id:order.id
+                },data:{
+                        status:"FAILED"
+                }
+        })
+  throw new BadRequestError(data);
+}
+
+console.log(data," ",status);
   return "route is correct";
+
+
 };
 
 // model order {

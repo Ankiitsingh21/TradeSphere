@@ -1,4 +1,4 @@
-import { requireAuth } from "@showsphere/common";
+import { requireAuth, validateRequest } from "@showsphere/common";
 import express from "express";
 import { body } from "express-validator";
 import { buyController } from "../../controller/buy-controller";
@@ -11,6 +11,6 @@ router.post("/buy", requireAuth, [
     .isInt({ gt: 0 })
     .notEmpty()
     .withMessage("the number of stocks can not be null"),
-],buyController);
+],validateRequest,buyController);
 
 export default router;
