@@ -27,11 +27,12 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
     },
   });
 
+//   console.log(order);
   const lockamount = price * quantity;
 
   const req = await axios({
     method: "post",
-    url: "https://sphere.dev/api/wallet/lock-money",
+    url: "http://sphere.dev/api/wallet/lock-money",
     data: {
       amount: lockamount,
     },
