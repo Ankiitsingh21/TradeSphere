@@ -1,13 +1,13 @@
 import { CustomError } from "@showsphere/common";
 import { Request, Response } from "express";
-import { buy } from "../services/buy-service";
+import { sell } from "../services/sell-service";
 
 export const sellController = async (req: Request, res: Response) => {
   try {
     const userID = req.currentUser!.id;
     const { symbol, quantity } = req.body;
     //     console.log(userID,symbol,quantity);
-    const resp = await buy(userID, symbol, quantity);
+    const resp = await sell(userID, symbol, quantity);
     return res.status(201).json({
       success: true,
       data: resp,
