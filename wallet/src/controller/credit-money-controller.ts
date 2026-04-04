@@ -1,17 +1,17 @@
 import { CustomError } from "@showsphere/common";
 import { Request, Response } from "express";
-import { lockmoney } from "../services/lockMoney";
+import { credit } from "../services/creditMoney";
 
-export const lockMoney = async (req: Request, res: Response) => {
+export const creditMoney = async (req: Request, res: Response) => {
   try {
-    // const userID = req.currentUser!.id;
-    const { userID, amount } = req.body;
-    const lock = await lockmoney(userID, amount);
+    //     const userID = req.currentUser!.id;
+    const { amount, userID } = req.body;
+    const cred = await credit(userID, amount);
     return res.status(201).json({
       success: true,
-      data: lock.tranc,
-      currntBalance: lock.update,
-      message: "Successfully locked a money into wallet",
+      data: cred,
+      currntBalance: cred,
+      message: "Successfully creda money into wallet",
     });
   } catch (error) {
     if (error instanceof CustomError) {
@@ -24,7 +24,8 @@ export const lockMoney = async (req: Request, res: Response) => {
     console.log(error);
     return res.status(400).send({
       success: false,
-      message: "Something went wrong at controller layer ",
+      message:
+        "Something went wrong at controller layer ,not able to update or credit money",
       errors: error,
     });
   }

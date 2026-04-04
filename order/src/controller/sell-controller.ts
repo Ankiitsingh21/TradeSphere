@@ -1,20 +1,17 @@
-import { BadRequestError, CustomError } from "@showsphere/common";
+import { CustomError } from "@showsphere/common";
 import { Request, Response } from "express";
-import { addmoney } from "../services/addMoney";
+import { buy } from "../services/buy-service";
 
-export const addMoney = async (req: Request, res: Response) => {
+export const sellController = async (req: Request, res: Response) => {
   try {
-    // console.log("hello");
-    const { amount } = req.body;
-    // console.log(req.currentUser)
-    //        const {userID}
     const userID = req.currentUser!.id;
-    const add = await addmoney(userID, amount);
+    const { symbol, quantity } = req.body;
+    //     console.log(userID,symbol,quantity);
+    const resp = await buy(userID, symbol, quantity);
     return res.status(201).json({
       success: true,
-      data: add.createtransactions,
-      currntBalance: add.addmoney,
-      message: "Successfully added a money into wallet",
+      data: resp,
+      message: "stock sell successfully",
     });
   } catch (error) {
     if (error instanceof CustomError) {

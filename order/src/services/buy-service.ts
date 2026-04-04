@@ -10,9 +10,9 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
   };
   const price = fetch.price;
 
-//   console.log(price);
+  //   console.log(price);
   if (!fetch || !price) {
-        console.log("error");
+    console.log("error");
     throw new BadRequestError("not able to fetch the latest price of stock ");
   }
 
@@ -27,86 +27,84 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
     },
   });
 
-//   console.log(order);
+  //   console.log(order);
   const lockamount = price * quantity;
 
-let data ,status;
+  let data, status;
   try {
-  const response = await axios({
-    method: "patch",
-    url: "http://wallet-srv:3000/api/wallet/lock-money",
+    const response = await axios({
+      method: "patch",
+      url: "http://wallet-srv:3000/api/wallet/lock-money",
+      data: {
+        userID: userID,
+        amount: lockamount,
+      },
+    });
+
+    data = response.data;
+    status = response.status;
+    // console.log("status:", response.status);
+    // console.log("data:", response.data);
+  } catch (error: any) {
+    status = error.response?.status;
+    data = error.response?.data;
+    // console.log("status:", error.response?.status);
+    // console.log("message:", error.response?.data);
+  }
+
+  if (!status) {
+    await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        status: "FAILED",
+      },
+    });
+    throw new BadRequestError("wallet is unreachable");
+  }
+
+  if (status !== 201) {
+    await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        status: "FAILED",
+      },
+    });
+    throw new BadRequestError(data);
+  }
+
+  // console.log(data," ",status);
+
+  ///now the locking money part is done now move on to the hit the matching engine for now just pass alll the quantity as true okey
+
+  const { data: settleData, status: settleStatus } = await callWalletService(
+    "http://wallet-srv:3000/api/wallet/settle-money",
+    {
+      userID,
+      settleamount: lockamount,
+      releaseamount: 0,
+    },
+  );
+
+  // console.log(settleData," ",settleStatus);
+  if (!settleStatus || settleStatus !== 201) {
+    throw new BadRequestError("problem in settling money");
+  }
+
+  const final = await prisma.order.update({
+    where: {
+      id: order.id,
+    },
     data: {
-      userID:userID,
-      amount: lockamount,
+      status: "SUCCESS",
+      resolved: lockamount,
     },
   });
 
-  data=response.data;
-  status=response.status
-  // console.log("status:", response.status);
-  // console.log("data:", response.data);
-
-} catch (error: any) {
-
-  status= error.response?.status
-  data=error.response?.data
-  // console.log("status:", error.response?.status);
-  // console.log("message:", error.response?.data);
-}
-
-if(!status){
-   await prisma.order.update({
-                where:{
-                        id:order.id
-                },data:{
-                        status:"FAILED"
-                }
-        })
-  throw new BadRequestError("wallet is unreachable");
-}
-
-if(status!==201){
-  await prisma.order.update({
-                where:{
-                        id:order.id
-                },data:{
-                        status:"FAILED"
-                }
-        })
-  throw new BadRequestError(data);
-}
-
-// console.log(data," ",status);
-
-
-///now the locking money part is done now move on to the hit the matching engine for now just pass alll the quantity as true okey
-
-const { data:settleData,status:settleStatus } = await callWalletService(
-  "http://wallet-srv:3000/api/wallet/settle-money",
-  {
-    userID,
-    settleamount: lockamount,
-    releaseamount: 0,
-  }
-);
-
-// console.log(settleData," ",settleStatus);
-if(!settleStatus || settleStatus!==201 ){
-   throw new BadRequestError("problem in settling money");
-}
-
-const final = await prisma.order.update({
-  where:{
-    id:order.id
-  },data:{
-    status:"SUCCESS",
-    resolved:lockamount
-  }
-})
-
   return final;
-
-
 };
 
 const callWalletService = async (url: string, payload: any) => {
@@ -128,4 +126,3 @@ const callWalletService = async (url: string, payload: any) => {
     };
   }
 };
-

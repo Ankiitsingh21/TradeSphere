@@ -5,10 +5,10 @@ export const createwallet = async (userId: string) => {
   try {
     // console.log(userId);
     const user = await prisma.wallet.upsert({
-      where:{
-        userId:userId
+      where: {
+        userId: userId,
       },
-      update:{},
+      update: {},
       create: {
         userId: userId,
       },

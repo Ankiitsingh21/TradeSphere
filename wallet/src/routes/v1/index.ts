@@ -7,6 +7,7 @@ import { getMoney } from "../../controller/get-money-controller";
 import { withdrawMoney } from "../../controller/withdraw-money-controller";
 import { lockMoney } from "../../controller/lock-money-controller";
 import { settleMoney } from "../../controller/settle-money-controller";
+import { creditMoney } from "../../controller/credit-money-controller";
 
 const router = express.Router();
 
@@ -36,7 +37,12 @@ router.get("/check-balance", requireAuth, getMoney);
 router.patch(
   "/withdraw",
   requireAuth,
-  [body("amount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative")],
+  [
+    body("amount")
+      .isFloat({ gt: 0 })
+      .notEmpty()
+      .withMessage("amount can not be negative"),
+  ],
   validateRequest,
   withdrawMoney,
 );
@@ -44,8 +50,12 @@ router.patch(
 router.patch(
   "/lock-money",
   // requireAuth,
-  [body("amount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative"),
-    body("userID").notEmpty().withMessage("user ID must be present")
+  [
+    body("amount")
+      .isFloat({ gt: 0 })
+      .notEmpty()
+      .withMessage("amount can not be negative"),
+    body("userID").notEmpty().withMessage("user ID must be present"),
   ],
   validateRequest,
   lockMoney,
@@ -54,12 +64,33 @@ router.patch(
 router.patch(
   "/settle-money",
   // requireAuth,
-  [body("settleamount").isFloat({ gt: 0 }).notEmpty().withMessage("amount can not be negative"),
-   body("releaseamount").isFloat().notEmpty().withMessage("amount can not be empty"),
-   body("userID").notEmpty().withMessage("user ID must be present")
+  [
+    body("settleamount")
+      .isFloat({ gt: 0 })
+      .notEmpty()
+      .withMessage("amount can not be negative"),
+    body("releaseamount")
+      .isFloat()
+      .notEmpty()
+      .withMessage("amount can not be empty"),
+    body("userID").notEmpty().withMessage("user ID must be present"),
   ],
   validateRequest,
   settleMoney,
+);
+
+router.patch(
+  "/credit-money",
+  // requireAuth,
+  [
+    body("amount")
+      .isFloat({ gt: 0 })
+      .notEmpty()
+      .withMessage("amount can not be negative"),
+    body("userID").notEmpty().withMessage("user ID must be present"),
+  ],
+  validateRequest,
+  creditMoney,
 );
 
 export default router;
