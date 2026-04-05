@@ -34,3 +34,11 @@ build:
           manual:
             - src: 'src/**/*.ts'
               dest: .
+      - image: ankiitsingh21/stock
+        context: stock
+        docker:
+          dockerfile: Dockerfile
+        sync:
+          manual:
+            - src: 'src/**/*.ts'
+              dest: .

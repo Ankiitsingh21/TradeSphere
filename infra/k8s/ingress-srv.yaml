@@ -31,3 +31,10 @@ spec:
                 name: order-srv
                 port:
                   number: 3000
+          - path: /api/stocks/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: stock-srv
+                port:
+                  number: 3000
