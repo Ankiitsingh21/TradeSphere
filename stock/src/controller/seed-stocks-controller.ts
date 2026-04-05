@@ -9,9 +9,10 @@ export const seedStocks = async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       data: data,
-      message: "stock buy successfully",
+      message: "stock seeded successfully",
     });
   } catch (error) {
+    console.log(error);
     if (error instanceof CustomError) {
       return res.status(error.statusCode).send({
         success: false,
@@ -19,7 +20,6 @@ export const seedStocks = async (req: Request, res: Response) => {
         errors: error.serializeErrors(),
       });
     }
-    console.log(error);
     return res.status(400).send({
       success: false,
       message: "Something went wrong at controller layer ",

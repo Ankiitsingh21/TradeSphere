@@ -1,24 +1,18 @@
 import { CustomError } from "@showsphere/common";
 import { Request, Response } from "express";
-import { fetch } from "../services/fetch-stocks-nse";
+import { create } from "../services/create-stocks";
 
-export const fetchNse = async (req: Request, res: Response) => {
+export const createConrtoller = async (req: Request, res: Response) => {
   try {
-    const { index } = req.body;
-    const data = await fetch(index);
-
-    const stocks = data.data
-      .filter((s: any) => s.symbol !== index)
-      .map((s: any) => ({
-        symbol: s.symbol,
-        price: s.lastPrice,
-      }));
+    const { symbol, price } = req.body;
+    const stock = await create(symbol, price);
     return res.status(201).json({
       success: true,
-      data: stocks,
-      message: "stock fetch successfully",
+      data: stock,
+      message: "stock created successfully",
     });
   } catch (error) {
+    console.log(error);
     if (error instanceof CustomError) {
       return res.status(error.statusCode).send({
         success: false,
@@ -26,7 +20,6 @@ export const fetchNse = async (req: Request, res: Response) => {
         errors: error.serializeErrors(),
       });
     }
-    console.log(error);
     return res.status(400).send({
       success: false,
       message: "Something went wrong at controller layer ",
