@@ -38,3 +38,10 @@ spec:
                 name: stock-srv
                 port:
                   number: 3000
+          - path: /api/portfolio/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: portfolio-srv
+                port:
+                  number: 3000

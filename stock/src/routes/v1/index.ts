@@ -28,7 +28,7 @@ const router = express.Router();
 //   seedStocks,
 // );
 
-router.get("/stocks", requireAuth, getStocks);
+router.get("/all", requireAuth, getStocks);
 
 router.get("/symbol", requireAuth, getByName);
 

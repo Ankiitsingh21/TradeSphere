@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portfolio
+  template:
+    metadata:
+      labels:
+        app: portfolio
+    spec:
+      containers:
+        - name: portfolio
+          image: ankiitsingh21/portfolio
+          env:
+            - name: NATS_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            - name: NATS_URL
+              value: "http://nats-srv:4222"
+
+            - name: NATS_CLUSTER_ID
+              value: tradesphere
+            - name: DATABASE_URL
+              value: postgres://postgres:postgres@postgres-portfolio-srv:5432/portfolio
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portfolio-srv
+spec:
+  selector:
+    app: portfolio
+  ports:
+    - name: portfolio
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
