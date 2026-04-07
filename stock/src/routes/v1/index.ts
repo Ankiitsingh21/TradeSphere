@@ -7,11 +7,14 @@ import { getStocks } from "../../controller/get-stocks-controller";
 import { getByName } from "../../controller/get-BySymbol-controller";
 import { createConrtoller } from "../../controller/create-stock-controller";
 import { updateStock } from "../../controller/update-stock-controller";
+import { toggleMarketController } from "../../controller/update-status-market";
+import isMarketOpen from "../../middleware/isMarketOpen";
 
 const router = express.Router();
 
 router.get(
   "/fetch-nse",
+  isMarketOpen,
   [body("index").notEmpty().withMessage("you must have to provide index")],
   validateRequest,
   fetchNse,
@@ -19,6 +22,7 @@ router.get(
 
 router.post(
   "/seed",
+  isMarketOpen,
   [body("index").notEmpty().withMessage("index can not be empty")],
   validateRequest,
   seedStocks,
@@ -30,6 +34,7 @@ router.get("/stock-symbol", requireAuth, getByName);
 
 router.post(
   "/stock-create",
+  isMarketOpen,
   requireAuth,
   [
     body("symbol").notEmpty().withMessage("name must be needed as symbol"),
@@ -43,6 +48,7 @@ router.post(
 
 router.patch(
   "/update-stock",
+  isMarketOpen,
   requireAuth,
   [
     body("symbol").notEmpty().withMessage("symbol is needed to find"),
@@ -54,11 +60,11 @@ router.patch(
   updateStock,
 );
 
-
-router.get('/health',async (req:Request,res:Response) => {
-
+router.get("/health", async (req: Request, res: Response) => {
   const date = new Date();
-  res.send({date});
+  res.send({ date });
 });
+
+router.post("/toggle", toggleMarketController);
 
 export default router;

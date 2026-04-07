@@ -1,6 +1,8 @@
 import { app } from "./app";
 import { connectDB } from "./config/db";
 import { natsWrapper } from "./natswrapper";
+import { marketcreate } from "./services/create-market";
+import { seed } from "./services/seed-stocks";
 
 const start = async () => {
   if (!process.env.JWT_KEY) {
@@ -39,6 +41,10 @@ const start = async () => {
     console.error("NATS connection failed, exiting", error);
     process.exit(1);
   }
+
+  await seed("NIFTY 500");
+  // console.log(see);
+  await marketcreate();
 
   app.listen(3000, () => {
     console.log(`Listening on 3000`);
