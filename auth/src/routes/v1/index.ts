@@ -39,4 +39,11 @@ router.post(
   SignIn,
 );
 
+
+router.get('/health',async (req:Request,res:Response) => {
+
+  const date = new Date();
+  res.send({date});
+});
+
 export default router;
