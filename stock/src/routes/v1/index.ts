@@ -12,28 +12,28 @@ import isMarketOpen from "../../middleware/isMarketOpen";
 
 const router = express.Router();
 
-router.get(
-  "/fetch-nse",
-  isMarketOpen,
-  [body("index").notEmpty().withMessage("you must have to provide index")],
-  validateRequest,
-  fetchNse,
-);
+// router.get(
+//   "/fetch-nse",
+//   isMarketOpen,
+//   [body("index").notEmpty().withMessage("you must have to provide index")],
+//   validateRequest,
+//   fetchNse,
+// );
 
-router.post(
-  "/seed",
-  isMarketOpen,
-  [body("index").notEmpty().withMessage("index can not be empty")],
-  validateRequest,
-  seedStocks,
-);
+// router.post(
+//   "/seed",
+//   isMarketOpen,
+//   [body("index").notEmpty().withMessage("index can not be empty")],
+//   validateRequest,
+//   seedStocks,
+// );
 
 router.get("/stocks", requireAuth, getStocks);
 
-router.get("/stock-symbol", requireAuth, getByName);
+router.get("/symbol", requireAuth, getByName);
 
 router.post(
-  "/stock-create",
+  "/create",
   isMarketOpen,
   requireAuth,
   [
@@ -47,7 +47,7 @@ router.post(
 );
 
 router.patch(
-  "/update-stock",
+  "/update",
   isMarketOpen,
   requireAuth,
   [
