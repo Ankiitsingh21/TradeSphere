@@ -1,31 +1,29 @@
-import { BadRequestError } from "@showsphere/common";
+import { BadRequestError, Subjects, TradeType } from "@showsphere/common";
 import { prisma } from "../config/db";
 import axios from "axios";
+import { error } from "node:console";
+import { BuyTradePublisher } from "../events/publishers/buy-trade-event";
+import { natsWrapper } from "../natswrapper";
 
 export const buy = async (userID: string, symbol: string, quantity: number) => {
-  // const fetch = #current price fetching but not present for now so mimicking okey
-  const fetch = {
-    name: "rel",
-    price: 95,
-  };
-  const price = fetch.price;
+  
+  const {data:stockprice,status:stockstatus}= await callWalletService(
+    "http://stock-srv:3000/api/stocks/internal-symbol",
+    "get",
+    {
+      symbol:symbol
+    }
+  )
 
-  //   console.log(price);
-  if (!fetch || !price) {
+  // console.log(stockstatus);
+
+    // console.log(stockprice);
+  if (!stockprice) {
     console.log("error");
     throw new BadRequestError("not able to fetch the latest price of stock ");
   }
 
-  const order = await prisma.order.create({
-    data: {
-      userId: userID,
-      symbol: symbol,
-      quantity: quantity,
-      status: "CREATED",
-      type: "BUY",
-      price: price,
-    },
-  });
+  const price = stockprice.data.price
 
   //   console.log(order);
   const lockamount = price * quantity;
@@ -48,33 +46,31 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
   } catch (error: any) {
     status = error.response?.status;
     data = error.response?.data;
-    // console.log("status:", error.response?.status);
-    // console.log("message:", error.response?.data);
+    console.log("status:", error.response?.status);
+    console.log("message:", error.response?.data);
   }
 
-  if (!status) {
-    await prisma.order.update({
-      where: {
-        id: order.id,
-      },
-      data: {
-        status: "FAILED",
-      },
-    });
+  console.log(data);
+  console.log(status);
+
+  if(status===400){
+    throw new BadRequestError(data.message)
+  }
+  if (!status || status !==201) {
     throw new BadRequestError("wallet is unreachable");
   }
 
-  if (status !== 201) {
-    await prisma.order.update({
-      where: {
-        id: order.id,
-      },
-      data: {
-        status: "FAILED",
-      },
-    });
-    throw new BadRequestError(data);
-  }
+  const order = await prisma.order.create({
+    data: {
+      userId: userID,
+      symbol: symbol,
+      quantity: quantity,
+      status: "CREATED",
+      type: "BUY",
+      price: price,
+    },
+  });
+
 
   // console.log(data," ",status);
 
@@ -82,6 +78,7 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
 
   const { data: settleData, status: settleStatus } = await callWalletService(
     "http://wallet-srv:3000/api/wallet/settle-money",
+    "patch",
     {
       userID,
       settleamount: lockamount,
@@ -89,7 +86,7 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
     },
   );
 
-  // console.log(settleData," ",settleStatus);
+  console.log(settleData," ",settleStatus);
   if (!settleStatus || settleStatus !== 201) {
     throw new BadRequestError("problem in settling money");
   }
@@ -103,17 +100,26 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
       resolved: lockamount,
     },
   });
+  
+  await new BuyTradePublisher(natsWrapper.client).publish({
+    userId:final.userId,
+    symbol:final.symbol,
+    price:final.price,
+    quantity:final.quantity,
+    type:TradeType.Buy
+  })
 
   return final;
 };
 
-const callWalletService = async (url: string, payload: any) => {
+const callWalletService = async (url: string,method:string, payload: any) => {
   try {
     const response = await axios({
-      method: "patch",
+      method:method,
       url,
       data: payload,
     });
+    // console.log(response.data);
 
     return {
       data: response.data,

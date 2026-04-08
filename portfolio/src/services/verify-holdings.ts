@@ -10,8 +10,5 @@ export const verifyy = async (userId: string, symbol: string) => {
       },
     },
   });
-  if (!stock) {
-    throw new BadRequestError("the stock has not been found");
-  }
   return stock;
 };

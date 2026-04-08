@@ -32,6 +32,9 @@ router.get("/all", requireAuth, getStocks);
 
 router.get("/symbol", requireAuth, getByName);
 
+
+router.get('/internal-symbol',getByName);
+
 router.post(
   "/create",
   isMarketOpen,

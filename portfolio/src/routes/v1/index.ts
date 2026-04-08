@@ -3,6 +3,7 @@ import express, { Request, Response } from "express";
 import { body } from "express-validator";
 import { prisma } from "../../config/db";
 import { verifyController } from "../../controller/verify-stocks";
+import { fetchStocks } from "../../controller/fetch-stocks";
 
 const router = express.Router();
 
@@ -16,8 +17,7 @@ router.get(
   verifyController,
 );
 
-
-router.get('/stocks',requireAuth,);
+router.get("/stocks", requireAuth, fetchStocks);
 
 router.get("/health", async (req: Request, res: Response) => {
   try {
