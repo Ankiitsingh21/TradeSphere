@@ -1,13 +1,22 @@
 import { CustomError } from "@showsphere/common";
 import { Request, Response } from "express";
 import { prisma } from "../config/db";
+import { get } from "../services/fetch-stocks";
 
 
 export const fetchStocks = async (req:Request,res:Response) => {
         try {
                 const userID = req.currentUser!.id;
                 const {symbol} = req.body;
-                const stock = await prisma.portfolio
+                let stock;
+                if(symbol){
+                        stock=await get(userID,symbol);
+                }else{
+                        stock=await get(userID);
+                }
+                if(!stock){
+                        throw new Error();
+                }
                 return res.status(201).json({
       success: true,
       data: stock,
