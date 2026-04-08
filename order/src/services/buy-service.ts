@@ -50,8 +50,8 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
     console.log("message:", error.response?.data);
   }
 
-  console.log(data);
-  console.log(status);
+  // console.log(data);
+  // console.log(status);
 
   if(status===400){
     throw new BadRequestError(data.message)
@@ -86,7 +86,7 @@ export const buy = async (userID: string, symbol: string, quantity: number) => {
     },
   );
 
-  console.log(settleData," ",settleStatus);
+  // console.log(settleData," ",settleStatus);
   if (!settleStatus || settleStatus !== 201) {
     throw new BadRequestError("problem in settling money");
   }

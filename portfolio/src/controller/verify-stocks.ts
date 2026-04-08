@@ -4,8 +4,9 @@ import { verifyy } from "../services/verify-holdings";
 
 export const verifyController = async (req: Request, res: Response) => {
   try {
-    const { userID, symbol } = req.body;
-    const stock = await verifyy(userID, symbol);
+    const { userId, symbol } = req.body;
+    // console.log(userId,symbol);
+    const stock = await verifyy(userId, symbol);
     return res.status(201).json({
       success: true,
       data: stock,

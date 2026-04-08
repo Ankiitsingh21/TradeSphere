@@ -1,12 +1,12 @@
-import { BadRequestError, BuyTrade, Listener, Subjects, TradeType } from "@showsphere/common";
+import { BadRequestError, BuyTradeEvent, Listener, Subjects, TradeType } from "@showsphere/common";
 import { queueGroupName } from "../queue-group-name";
 import { Message } from "node-nats-streaming";
 import { buy } from "../../services/create";
 
-export class BuyTradeListener extends Listener<BuyTrade> {
+export class BuyTradeListener extends Listener<BuyTradeEvent> {
   subject: Subjects.BuyTrade = Subjects.BuyTrade;
   queueGroupName: string = queueGroupName;
-  async onMessage(data: BuyTrade["data"], msg: Message) {
+  async onMessage(data: BuyTradeEvent["data"], msg: Message) {
     try {
     await buy(
       data.userId,

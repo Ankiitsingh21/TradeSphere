@@ -1,6 +1,6 @@
-import { BuyTrade, Publisher, Subjects } from "@showsphere/common";
+import {  BuyTradeEvent, Publisher, Subjects } from "@showsphere/common";
 
 
-export class BuyTradePublisher extends Publisher<BuyTrade> {
+export class BuyTradePublisher extends Publisher<BuyTradeEvent> {
         subject: Subjects.BuyTrade=Subjects.BuyTrade
 }
