@@ -6,7 +6,7 @@ export const buy = async (
   userId: string,
   symbol: string,
   buyPrice: number,
-  quantity: number
+  quantity: number,
 ) => {
   const price = new Prisma.Decimal(buyPrice);
   const qty = new Prisma.Decimal(quantity);
@@ -22,7 +22,6 @@ export const buy = async (
       },
     });
 
-   
     if (!share) {
       const totalInvested = price.mul(qty);
 
@@ -37,7 +36,6 @@ export const buy = async (
       });
     }
 
-  
     const newInvestment = price.mul(qty);
 
     const newQty = share.quantity.plus(qty);

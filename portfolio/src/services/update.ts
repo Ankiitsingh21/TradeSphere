@@ -6,7 +6,7 @@ export const sell = async (
   userId: string,
   symbol: string,
   sellPrice: number,
-  quantity: number
+  quantity: number,
 ) => {
   const qty = new Prisma.Decimal(quantity);
   const sellP = new Prisma.Decimal(sellPrice);
@@ -32,15 +32,13 @@ export const sell = async (
 
     const avgPrice = share.avgBuyPrice;
 
-    
-    const cost = avgPrice.mul(qty);     
-    const revenue = sellP.mul(qty);     
-    const profit = revenue.minus(cost); 
+    const cost = avgPrice.mul(qty);
+    const revenue = sellP.mul(qty);
+    const profit = revenue.minus(cost);
 
     const newQty = share.quantity.minus(qty);
     const newTotal = share.totalInvested.minus(cost);
 
-    
     if (newQty.eq(0)) {
       await tx.portfolio.delete({
         where: {
@@ -54,7 +52,6 @@ export const sell = async (
       };
     }
 
-    
     const updated = await tx.portfolio.update({
       where: {
         userId_symbol: { userId, symbol },
