@@ -1,47 +1,59 @@
 import { BadRequestError } from "@showsphere/common";
-import { prisma } from "../config/db"
+import { prisma } from "../config/db";
+import { Prisma } from "../generated/prisma/client";
 
+export const buy = async (
+  userId: string,
+  symbol: string,
+  buyPrice: number,
+  quantity: number
+) => {
+  const price = new Prisma.Decimal(buyPrice);
+  const qty = new Prisma.Decimal(quantity);
 
-export const create= async(userId:string,symbol:string,buyPrice:number,quantity:number)=>{
-        const find = await prisma.portfolio.findUnique({
-                where:{
-                        userId:userId,
-                        symbol:symbol
-                }
-        });
+  if (qty.lte(0)) {
+    throw new BadRequestError("Quantity must be greater than 0");
+  }
 
-        if(!find){
-                const totalInvested=buyPrice*quantity;
-                const avgPrice=totalInvested/quantity;
-                const creat= await prisma.portfolio.create({
-                        data:{
-                                userId:userId,
-                                symbol:symbol,
-                                avgBuyPrice:avgPrice,
-                                
-                        }
-                })
+  return await prisma.$transaction(async (tx) => {
+    const share = await tx.portfolio.findUnique({
+      where: {
+        userId_symbol: { userId, symbol },
+      },
+    });
 
-        }
-}
+   
+    if (!share) {
+      const totalInvested = price.mul(qty);
 
+      return await tx.portfolio.create({
+        data: {
+          userId,
+          symbol,
+          avgBuyPrice: price,
+          totalInvested,
+          quantity: qty,
+        },
+      });
+    }
 
-// model Portfolio {
-//   id        String   @id @default(uuid())
+  
+    const newInvestment = price.mul(qty);
 
-//   userId    String
-//   symbol    String
+    const newQty = share.quantity.plus(qty);
+    const newTotal = share.totalInvested.plus(newInvestment);
 
-//   avgBuyPrice Decimal @db.Decimal(18, 6)
+    const newAvg = newTotal.div(newQty);
 
-//   quantity    Decimal @db.Decimal(18, 6)
-
-//   totalInvested Decimal @db.Decimal(18, 6)
-
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-
-//   @@unique([userId, symbol])   
-//   @@index([userId])           
-//   @@index([symbol])            
-// }
+    return await tx.portfolio.update({
+      where: {
+        userId_symbol: { userId, symbol },
+      },
+      data: {
+        avgBuyPrice: newAvg,
+        totalInvested: newTotal,
+        quantity: newQty,
+      },
+    });
+  });
+};
