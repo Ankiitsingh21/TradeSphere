@@ -15,9 +15,9 @@ datasource db {
 
 model portfolio{
   id String @id @default(uuid())
-  userId String @unique
+  userId String 
   symbol String 
-  buyPrice Int
+  buyPrice Decimal
   quantity Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
