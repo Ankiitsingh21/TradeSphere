@@ -46,9 +46,9 @@ export const sell = async (
   if (!holdingsStatus || holdingsStatus !==201) {
     throw new BadRequestError("not able to verify stocks");
   }
-
-  if(quantity>holdings.quantity){
-    throw new BadRequestError("not able to sell these stocks");
+  // console.log(quantity+ holdings.data.quantity)
+  if(quantity>holdings.data.quantity){
+    throw new BadRequestError("you did not own that much quantity");
   }
 
 

@@ -10,5 +10,9 @@ export const verifyy = async (userId: string, symbol: string) => {
       },
     },
   });
+
+  if(!stock){
+    throw new BadRequestError("stock does not owned or stock does not present");
+  }
   return stock;
 };
