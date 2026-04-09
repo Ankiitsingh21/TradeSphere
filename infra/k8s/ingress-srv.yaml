@@ -45,3 +45,10 @@ spec:
                 name: portfolio-srv
                 port:
                   number: 3000
+          - path: /api/tradeengine/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: tradeengine-srv
+                port:
+                  number: 3000

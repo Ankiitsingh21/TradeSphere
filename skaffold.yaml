@@ -50,3 +50,11 @@ build:
           manual:
             - src: 'src/**/*.ts'
               dest: .
+      - image: ankiitsingh21/tradeengine
+        context: tradeengine
+        docker:
+          dockerfile: Dockerfile
+        sync:
+          manual:
+            - src: 'src/**/*.ts'
+              dest: .

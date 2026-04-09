@@ -1,5 +1,5 @@
 {
-  "name": "portfolio",
+  "name": "tradeengine",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -17,6 +17,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@datastructures-js/priority-queue": "^6.3.5",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
     "@showsphere/common": "^3.0.32",

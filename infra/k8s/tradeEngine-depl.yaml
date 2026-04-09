@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tradeengine-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tradeengine
+  template:
+    metadata:
+      labels:
+        app: tradeengine
+    spec:
+      containers:
+        - name: tradeengine
+          image: ankiitsingh21/tradeengine
+          env:
+            - name: NATS_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            - name: NATS_URL
+              value: "http://nats-srv:4222"
+
+            - name: NATS_CLUSTER_ID
+              value: tradesphere
+            - name: DATABASE_URL
+              value: postgres://postgres:postgres@postgres-tradeengine-srv:5432/tradeengine
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tradeengine-srv
+spec:
+  selector:
+    app: tradeengine
+  ports:
+    - name: tradeengine
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
