@@ -1,6 +1,7 @@
 import { app } from "./app";
 import { connectDB } from "./config/db";
 import { natsWrapper } from "./natswrapper";
+// import {runCompleteMatchingSimulation} from "./services/orderManages";
 
 const start = async () => {
   if (!process.env.JWT_KEY) {
@@ -18,7 +19,7 @@ const start = async () => {
   if (!process.env.NATS_URL) {
     throw new Error("NATS_URL is incorrect");
   }
-
+  // await runCompleteMatchingSimulation();
   await connectDB();
 
   try {
@@ -35,7 +36,6 @@ const start = async () => {
 
     process.on("SIGINT", () => natsWrapper.client.close());
     process.on("SIGTERM", () => natsWrapper.client.close());
-
   } catch (error) {
     console.error("NATS connection failed, exiting", error);
     process.exit(1);
