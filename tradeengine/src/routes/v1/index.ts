@@ -4,6 +4,9 @@ import { prisma } from "../../config/db";
 
 const router = express.Router();
 
+
+
+
 router.get("/health", async (req: Request, res: Response) => {
   try {
     await prisma.$queryRaw`SELECT 1`;

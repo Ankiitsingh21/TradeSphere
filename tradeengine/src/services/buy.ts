@@ -3,6 +3,7 @@ import { Prisma } from "../generated/prisma/client";
 import { getOrderBook } from "../orderBook/map";
 import { prisma } from "../config/db";
 import { OrderNode } from "../orderBook/queue";
+import { buyAddInQueue, sellAddInQueue } from "../orderBook/addInQueue";
 
 export const buy = async (
   orderId: string,
@@ -12,111 +13,112 @@ export const buy = async (
   price: number,
 ) => {
   const pricee = new Prisma.Decimal(price);
-  const qty = new Prisma.Decimal(quantity);
+  let qty = new Prisma.Decimal(quantity);
 
   const book = getOrderBook(symbol);
-  const topSeller = book.sellHeap.front();
-  if (!topSeller || topSeller.price.greaterThan(pricee)) {
-    return await addInQueue(orderId, userId, quantity, price, symbol);
+  const firstSeller = book.sellHeap.front();
+  if (!firstSeller || firstSeller.price.greaterThan(pricee)) {
+    return await buyAddInQueue(orderId, userId, quantity, price, symbol);
   }
 
+  while (qty.gt(0) && book.sellHeap.size() > 0) {
+    const seller = book.sellHeap.front();
 
-  while(qty.gt(0) && book.sellHeap.size()>0){
-        
+    if (seller?.price.gt(pricee)) break;
 
-        if(topSeller!.quantity.equals(qty)){
-                const sellerPrice=topSeller!.price;
+    if (seller!.quantity.equals(qty)) {
+      const sellerPrice = seller!.price;
 
+      const difference = pricee.minus(sellerPrice);
 
-                const difference = pricee.minus(sellerPrice);
+      const releaseAmount = qty.mul(difference);
 
-                const releaseAmount = qty.mul(difference);
+      const orderRecord = await prisma.orderBook.create({
+        data: {
+          orderId: orderId,
+          userId: userId,
+          type: TradeType.Buy,
+          status: TradeStatus.MATCHED,
+          quantity: qty,
+          price: sellerPrice,
+          symbol: symbol,
+        },
+      });
 
+      const update = await prisma.orderBook.update({
+        where: {
+          id: seller?.id,
+        },
+        data: {
+          status: TradeStatus.MATCHED,
+        },
+      });
+      book.sellHeap.dequeue();
 
-                const orderRecord = await prisma.orderBook.create({
-                        data:{
-                                orderId:orderId,
-                                userId:userId,
-                                type:TradeType.Buy,
-                                status:TradeStatus.MATCHED,
-                                quantity:qty,
-                                price:sellerPrice,
-                                symbol:symbol
-                        }
-                });
+      qty = new Prisma.Decimal(0);
+      // qty.minus(topSeller?.quantity);
+      //i have to cast a event to order service that trade is executed
+      return { orderRecord, releaseAmount };
+    } else if (qty.greaterThan(seller!.quantity)) {
+      const update = await prisma.orderBook.update({
+        where: {
+          id: seller?.id,
+        },
+        data: {
+          status: TradeStatus.MATCHED,
+        },
+      });
+      book.sellHeap.dequeue();
 
-                const update = await prisma.orderBook.update({
-                        where:{
-                                id:topSeller?.id
-                        },data:{
-                                status:TradeStatus.MATCHED
-                        }
-                })
+      qty = qty.minus(seller!.quantity);
+    } else {
+      const remaining = seller!.quantity.minus(qty);
 
-                //i have to cast a event to order service that trade is executed 
-                return {orderRecord,releaseAmount};
-        }else if(qty.lessThan(topSeller.quantity)){
-                
-        }
+      book.sellHeap.dequeue();
+
+      const update = await prisma.orderBook.update({
+        where: {
+          id: seller?.id,
+        },
+        data: {
+          quantity: remaining,
+        },
+      });
+
+      const order: OrderNode = {
+        id: seller!.id,
+        orderId: seller!.orderId,
+        userId: seller!.userId,
+        symbol: seller!.symbol,
+        quantity: remaining,
+        price: seller!.price,
+        type: seller!.type as TradeType,
+        createdAt: seller!.createdAt,
+      };
+      book.sellHeap.enqueue(order);
+
+      const sellerPrice = seller!.price;
+
+      const difference = pricee.minus(sellerPrice);
+
+      const releaseAmount = qty.mul(difference);
+      const orderRecord = await prisma.orderBook.create({
+        data: {
+          orderId: orderId,
+          userId: userId,
+          type: TradeType.Buy,
+          status: TradeStatus.MATCHED,
+          quantity: qty,
+          price: sellerPrice,
+          symbol: symbol,
+        },
+      });
+
+      return { orderRecord, releaseAmount };
+    }
   }
 
+  if (qty.gt(0)) {
+    return await buyAddInQueue(orderId, userId, qty, price, symbol);
+  }
 };
-const addInQueue = async (
-  orderId: string,
-  userId: string,
-  quantity: number,
-  price: number,
-  symbol: string,
-) => {
-  // const dbRecord = await prisma.$transaction(async(tx)=>{
-
-  const pricee = new Prisma.Decimal(price);
-  const qty = new Prisma.Decimal(quantity);
-  const dbRecord = await prisma.orderBook.create({
-    data: {
-      orderId: orderId,
-      userId: userId,
-      price: pricee,
-      quantity: qty,
-      type: TradeType.Buy,
-      status: TradeStatus.PENDING,
-      symbol: symbol,
-    },
-  });
-
-  // return db;
-  // });
-
-  const book = getOrderBook(symbol);
-  if (!dbRecord) {
-    throw new BadRequestError("not able to change create record");
-  }
-
-  const order: OrderNode = {
-    id: dbRecord.id,
-    orderId: dbRecord.orderId,
-    userId: dbRecord.userId,
-    symbol: dbRecord.symbol,
-    quantity: dbRecord.quantity,
-    price: dbRecord.price,
-    type: dbRecord.type as TradeType,
-    createdAt: dbRecord.createdAt,
-  };
-
-  book.buyHeap.enqueue(order);
-  return dbRecord;
-};
-
-// model orderBook{
-//   id String @id @default(uuid())
-//   orderId String @unique
-//   userId String
-//   symbol String
-//   quantity Decimal @db.Decimal(18,6)
-//   price Decimal @db.Decimal(18,6)
-//   type TradeType
-//   status TradeStatus
-
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-// }
