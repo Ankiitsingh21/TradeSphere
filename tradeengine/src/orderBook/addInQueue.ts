@@ -8,7 +8,7 @@ export const buyAddInQueue = async (
   orderId: string,
   userId: string,
   quantity: any,
-  price: number,
+  price: any,
   symbol: string,
 ) => {
   const pricee = new Prisma.Decimal(price);
@@ -29,7 +29,6 @@ export const buyAddInQueue = async (
   if (!dbRecord) throw new BadRequestError("not able to create record");
 
   const book = getOrderBook(symbol);
-
   const order: OrderNode = {
     id: dbRecord.id,
     orderId: dbRecord.orderId,
@@ -42,7 +41,7 @@ export const buyAddInQueue = async (
   };
 
   book.buyHeap.enqueue(order);
-  return dbRecord;
+  return { status: "QUEUED", dbRecord };
 };
 
 export const sellAddInQueue = async (
@@ -70,7 +69,6 @@ export const sellAddInQueue = async (
   if (!dbRecord) throw new BadRequestError("not able to create record");
 
   const book = getOrderBook(symbol);
-
   const order: OrderNode = {
     id: dbRecord.id,
     orderId: dbRecord.orderId,
@@ -83,5 +81,5 @@ export const sellAddInQueue = async (
   };
 
   book.sellHeap.enqueue(order);
-  return dbRecord;
+  return { status: "QUEUED", dbRecord };
 };

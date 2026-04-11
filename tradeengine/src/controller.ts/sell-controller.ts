@@ -3,25 +3,17 @@ import { Request, Response } from "express";
 import { buy } from "../services/buy";
 import { sell } from "../services/sell";
 
-export const buyController = async(req:Request,res:Response)=>{
-        try {
-                const {orderId,
-                          userId,
-                          price,
-                          quantity,
-                          symbol}= req.body;
-                const buyy= await sell(orderId,
-                          userId,
-                          symbol,
-                          quantity,
-                          price);
-                return res.status(201).json({
+export const sellController = async (req: Request, res: Response) => {
+  try {
+    const { orderId, userId, price, quantity, symbol } = req.body;
+    const buyy = await sell(orderId, userId, symbol, quantity, price);
+    return res.status(201).json({
       success: true,
       data: buyy,
       message: "Successfully matched",
     });
-        } catch (error) {
-                if (error instanceof CustomError) {
+  } catch (error) {
+    if (error instanceof CustomError) {
       return res.status(error.statusCode).send({
         success: false,
         message: error.message,
@@ -34,5 +26,5 @@ export const buyController = async(req:Request,res:Response)=>{
       message: "Something went wrong at controller layer ",
       errors: error,
     });
-        }
-}
+  }
+};

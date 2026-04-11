@@ -1,6 +1,7 @@
 import { app } from "./app";
 import { connectDB } from "./config/db";
 import { natsWrapper } from "./natswrapper";
+import { seedOrderBooks } from "./orderBook/seedOrderBook";
 // import {runCompleteMatchingSimulation} from "./services/orderManages";
 
 const start = async () => {
@@ -21,6 +22,7 @@ const start = async () => {
   }
   // await runCompleteMatchingSimulation();
   await connectDB();
+  await seedOrderBooks();
 
   try {
     await natsWrapper.connect(
