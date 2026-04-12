@@ -29,7 +29,7 @@ export const sell = async (
     "get",
     {},
   );
-
+  // console.log(holdings);
   if (holdingsStatus === 400) {
     throw new BadRequestError(holdings.message);
   }
@@ -103,7 +103,7 @@ export const sell = async (
       symbol: update.symbol,
       price: update.price,
       type: TradeType.Sell,
-      quantity: matchedData.data.matchedQty, // only matched portion
+      quantity: matchedData.data.matchedQty, 
     });
 
     return update;
@@ -144,6 +144,7 @@ const callService = async (url: string, method: string, payload: any) => {
     const response = await axios({ method, url, data: payload });
     return { data: response.data, status: response.status };
   } catch (error: any) {
+    console.log(url);
     console.log(error.response?.data);
     return {
       data: error.response?.data,

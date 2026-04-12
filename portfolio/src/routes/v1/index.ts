@@ -9,11 +9,11 @@ const router = express.Router();
 
 router.get(
   "/verify",
-  [
-    body("userId").notEmpty().withMessage("userId must not be empty"),
-    body("symbol").notEmpty().withMessage("symbol must be needed"),
-  ],
-  validateRequest,
+  // [
+  //   body("userId").notEmpty().withMessage("userId must not be empty"),
+  //   body("symbol").notEmpty().withMessage("symbol must be needed"),
+  // ],
+  // validateRequest,
   verifyController,
 );
 

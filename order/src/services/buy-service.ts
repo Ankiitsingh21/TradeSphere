@@ -106,7 +106,7 @@ export const buy = async (
         userID,
       },
     );
-    console.log("partial buy filled", settleData, settleStatus);
+    // console.log("partial buy filled", settleData, settleStatus);
 
     if (!settleStatus || settleStatus !== 201) {
       throw new BadRequestError("problem in settling money");
@@ -131,7 +131,6 @@ export const buy = async (
     return update;
   }
 
-  // MATCHED
   const releaseAmount = matchedData.data.releaseAmount
     ? Number(matchedData.data.releaseAmount)
     : 0;
