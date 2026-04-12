@@ -4,7 +4,13 @@ import { getbyname } from "../services/get-By-name";
 
 export const getByName = async (req: Request, res: Response) => {
   try {
-    const { symbol } = req.body;
+    const symbol = (req.query.symbol as string) || (req.body.symbol as string);
+    if (!symbol) {
+      return res.status(400).json({
+        success: false,
+        message: "symbol is required",
+      });
+    }
     const stock = await getbyname(symbol);
     return res.status(201).json({
       success: true,
@@ -22,7 +28,7 @@ export const getByName = async (req: Request, res: Response) => {
     }
     return res.status(400).send({
       success: false,
-      message: "Something went wrong at controller layer ",
+      message: "Something went wrong at controller layer",
       errors: error,
     });
   }

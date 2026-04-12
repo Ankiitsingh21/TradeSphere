@@ -11,57 +11,34 @@ export const sell = async (
   price?: number,
 ) => {
   if (!price) {
-    const { data: stockprice, status: stockstatus } = await callWalletService(
-      "http://stock-srv:3000/api/stocks/internal-symbol",
+    const { data: stockprice, status: stockstatus } = await callService(
+      `http://stock-srv:3000/api/stocks/internal-symbol?symbol=${encodeURIComponent(symbol)}`,
       "get",
-      {
-        symbol: symbol,
-      },
+      {},
     );
-    price = stockprice.data.price;
+
+    if (!stockstatus || stockstatus !== 201) {
+      throw new BadRequestError("not able to fetch the latest price of stock");
+    }
+
+    price = Number(stockprice.data.price);
   }
-  //  const {data:stockprice,status:stockstatus}= await callWalletService(
-  //     "http://stock-srv:3000/api/stocks/internal-symbol",
-  //     "get",
-  //     {
-  //       symbol:symbol
-  //     }
-  //   )
 
-  //   // console.log(stockstatus);
-
-  //     // console.log(stockprice);
-  //   if (!stockprice) {
-  //     console.log("error");
-  //     throw new BadRequestError("not able to fetch the latest price of stock ");
-  //   }
-
-  // const price = stockprice.data.price
-  //2. Verify holdings → Portfolio Service (sync) → fail = throw error, stop */
-  // const price = 100;
-  // console.log(userID);
-  const { data: holdings, status: holdingsStatus } = await callWalletService(
-    "http://portfolio-srv:3000/api/portfolio/verify",
+  const { data: holdings, status: holdingsStatus } = await callService(
+    `http://portfolio-srv:3000/api/portfolio/verify?userId=${encodeURIComponent(userID)}&symbol=${encodeURIComponent(symbol)}`,
     "get",
-    {
-      userId: userID,
-      symbol: symbol,
-    },
+    {},
   );
 
-  // console.log(holdings);
   if (holdingsStatus === 400) {
     throw new BadRequestError(holdings.message);
   }
   if (!holdingsStatus || holdingsStatus !== 201) {
     throw new BadRequestError("not able to verify stocks");
   }
-  // console.log(quantity+ holdings.data.quantity)
-  if (quantity > holdings.data.quantity) {
-    throw new BadRequestError("you did not own that much quantity");
-  }
-
-  //for now i am just thinking that the stocks are mine so i am not taking care of what to do  okey
+  if (quantity > Number(holdings.data.quantity)) {
+  throw new BadRequestError("you do not own that much quantity");
+}
 
   const order = await prisma.order.create({
     data: {
@@ -70,16 +47,11 @@ export const sell = async (
       type: "SELL",
       status: "CREATED",
       quantity: quantity,
-      // resolved:
       price: price!,
     },
   });
 
-  const amount = price! * quantity;
-
-  //hit the matching engine now but mimick this also
-
-  const { data: matchedData, status: matchedStatus } = await callWalletService(
+  const { data: matchedData, status: matchedStatus } = await callService(
     "http://tradeengine-srv:3000/api/tradeengine/sell",
     "post",
     {
@@ -92,38 +64,34 @@ export const sell = async (
   );
 
   if (!matchedStatus || matchedStatus !== 201) {
-    throw new BadRequestError("problem in matching money");
+    throw new BadRequestError("problem in matching engine");
   }
 
-  // console.log(matchedData,matchedStatus);
-
-  // return matchedData;
-
+  // matchedData = { success: true, data: { status, ... }, message }
   if (matchedData.data.status === "QUEUED") {
     const update = await prisma.order.update({
-      where: {
-        id: order.id,
-      },
+      where: { id: order.id },
       data: {
         status: "PENDING",
         resolved: 0,
       },
     });
-
     return update;
   }
 
   if (matchedData.data.status === "PARTIAL") {
     const creditAmount =
-      Number(matchedData.tradePrice) * Number(matchedData.matchedQty);
+      Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
 
-    const { status: creditStatus } = await callWalletService(
+    const { status: creditStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
-      {  amount: creditAmount ,userId:order.userId},
+      { amount: creditAmount, userID: order.userId }, // userID not userId
     );
-    if (!creditStatus || creditStatus !== 201)
+
+    if (!creditStatus || creditStatus !== 201) {
       throw new BadRequestError("problem in crediting money");
+    }
 
     const update = await prisma.order.update({
       where: { id: order.id },
@@ -135,23 +103,25 @@ export const sell = async (
       symbol: update.symbol,
       price: update.price,
       type: TradeType.Sell,
-      quantity: update.quantity,
+      quantity: matchedData.data.matchedQty, // only matched portion
     });
+
     return update;
   }
-  // console.log("hi")
+
+  // MATCHED
   const creditAmount =
     Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
-    // console.log(creditAmount);
-  const { status: creditStatus } = await callWalletService(
+
+  const { status: creditStatus } = await callService(
     "http://wallet-srv:3000/api/wallet/credit-money",
     "patch",
     { userID, amount: creditAmount },
   );
 
-  // console.log(creditStatus,creditAmount)
-  if (!creditStatus || creditStatus !== 201)
+  if (!creditStatus || creditStatus !== 201) {
     throw new BadRequestError("problem in crediting money");
+  }
 
   const final = await prisma.order.update({
     where: { id: order.id },
@@ -169,19 +139,10 @@ export const sell = async (
   return final;
 };
 
-const callWalletService = async (url: string, method: string, payload: any) => {
+const callService = async (url: string, method: string, payload: any) => {
   try {
-    const response = await axios({
-      // method: "patch",
-      method,
-      url,
-      data: payload,
-    });
-
-    return {
-      data: response.data,
-      status: response.status,
-    };
+    const response = await axios({ method, url, data: payload });
+    return { data: response.data, status: response.status };
   } catch (error: any) {
     console.log(error.response?.data);
     return {

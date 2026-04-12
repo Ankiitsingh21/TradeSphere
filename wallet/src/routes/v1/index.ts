@@ -49,7 +49,6 @@ router.patch(
 
 router.patch(
   "/lock-money",
-  // requireAuth,
   [
     body("amount")
       .isFloat({ gt: 0 })
@@ -63,16 +62,14 @@ router.patch(
 
 router.patch(
   "/settle-money",
-  // requireAuth,
   [
     body("settleamount")
       .isFloat({ gt: 0 })
       .notEmpty()
-      .withMessage("amount can not be negative"),
+      .withMessage("settleamount must be positive"),
     body("releaseamount")
-      .isFloat()
-      .notEmpty()
-      .withMessage("amount can not be empty"),
+      .isFloat({ min: 0 }) // allows 0 — no notEmpty() since 0 is valid
+      .withMessage("releaseamount must be a number >= 0"),
     body("userID").notEmpty().withMessage("user ID must be present"),
   ],
   validateRequest,
@@ -81,21 +78,19 @@ router.patch(
 
 router.patch(
   "/credit-money",
-  // requireAuth,
-  // [
-  //   body("amount")
-  //     .notEmpty()
-  //     .withMessage("amount can not be negative"),
-  //   body("userID").notEmpty().withMessage("user ID must be present"),
-  // ],
-  // validateRequest,
+  [
+    body("amount")
+      .isFloat({ gt: 0 })
+      .withMessage("amount must be a positive number"),
+    body("userID").notEmpty().withMessage("userID must be present"),
+  ],
+  validateRequest,
   creditMoney,
 );
 
-router.get('/health',async (req:Request,res:Response) => {
-
+router.get("/health", async (req: Request, res: Response) => {
   const date = new Date();
-  res.send({date});
+  res.send({ date });
 });
 
 export default router;

@@ -1,10 +1,8 @@
 import { BadRequestError, Subjects, TradeType } from "@showsphere/common";
 import { prisma } from "../config/db";
 import axios from "axios";
-import { error } from "node:console";
 import { BuyTradePublisher } from "../events/publishers/buy-trade-event";
 import { natsWrapper } from "../natswrapper";
-import { Prisma } from "../generated/prisma/client";
 
 export const buy = async (
   userID: string,
@@ -13,46 +11,20 @@ export const buy = async (
   price?: number,
 ) => {
   if (!price) {
-    const { data: stockprice, status: stockstatus } = await callWalletService(
-      "http://stock-srv:3000/api/stocks/internal-symbol",
+    const { data: stockprice, status: stockstatus } = await callService(
+      `http://stock-srv:3000/api/stocks/internal-symbol?symbol=${encodeURIComponent(symbol)}`,
       "get",
-      {
-        symbol: symbol,
-      },
+      {},
     );
 
-    // console.log(stockstatus);
+    if (!stockstatus || stockstatus !== 201) {
+      throw new BadRequestError("not able to fetch the latest price of stock");
+    }
 
-    // console.log(stockprice);
-    // if (!price) {
-    //   console.log("error");
-    //   throw new BadRequestError("not able to fetch the latest price of stock ");
-    // }
-
-    price = stockprice.data.price;
+    price = Number(stockprice.data.price);
   }
 
-  // const {data:stockprice,status:stockstatus}= await callWalletService(
-  //   "http://stock-srv:3000/api/stocks/internal-symbol",
-  //   "get",
-  //   {
-  //     symbol:symbol
-  //   }
-  // )
-
-  // console.log(stockstatus);
-
-  //   console.log(stockprice);
-  // if (!price) {
-  //   console.log("error");
-  //   throw new BadRequestError("not able to fetch the latest price of stock ");
-  // }
-
-  // const price = stockprice.data.price
-
-  //   console.log(order);
   const lockamount = price! * quantity;
-  // console.log(lockamount);
 
   let data, status;
   try {
@@ -64,20 +36,14 @@ export const buy = async (
         amount: lockamount,
       },
     });
-
     data = response.data;
     status = response.status;
-    // console.log("status:", response.status);
-    // console.log("data:", response.data);
   } catch (error: any) {
     status = error.response?.status;
     data = error.response?.data;
-    console.log("status:", error.response?.status);
-    console.log("message:", error.response?.data);
+    console.log("lock-money status:", error.response?.status);
+    console.log("lock-money message:", error.response?.data);
   }
-
-  // console.log(data);
-  // console.log(status);
 
   if (status === 400) {
     throw new BadRequestError(data.message);
@@ -97,11 +63,7 @@ export const buy = async (
     },
   });
 
-  // console.log(data," ",status);
-
-  ///now the locking money part is done now move on to the hit the matching engine for now just pass alll the quantity as true okey
-
-  const { data: matchedData, status: matchedStatus } = await callWalletService(
+  const { data: matchedData, status: matchedStatus } = await callService(
     "http://tradeengine-srv:3000/api/tradeengine/buy",
     "post",
     {
@@ -114,28 +76,28 @@ export const buy = async (
   );
 
   if (!matchedStatus || matchedStatus !== 201) {
-    throw new BadRequestError("problem in matching money");
+    throw new BadRequestError("problem in matching engine");
   }
 
+  // matchedData = { success: true, data: { status, ... }, message }
   if (matchedData.data.status === "QUEUED") {
     const update = await prisma.order.update({
-      where: {
-        id: order.id,
-      },
+      where: { id: order.id },
       data: {
-        quantity: matchedData.data.quantity,
         status: "PENDING",
         resolved: 0,
       },
     });
     return update;
   }
-  // console.log(matchedData.data, matchedStatus);
 
   if (matchedData.data.status === "PARTIAL") {
-    const priceDiffSavings = matchedData.data.totalReleaseAmount;
+    const priceDiffSavings = matchedData.data.releaseAmount
+      ? Number(matchedData.data.releaseAmount)
+      : 0;
     const settleAmount = lockamount - priceDiffSavings;
-    const { data: settleData, status: settleStatus } = await callWalletService(
+
+    const { data: settleData, status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
       "patch",
       {
@@ -144,16 +106,14 @@ export const buy = async (
         userID,
       },
     );
-    console.log("partial filled")
-    console.log(settleData," ",settleStatus);
+    console.log("partial buy filled", settleData, settleStatus);
+
     if (!settleStatus || settleStatus !== 201) {
       throw new BadRequestError("problem in settling money");
     }
 
     const update = await prisma.order.update({
-      where: {
-        id: order.id,
-      },
+      where: { id: order.id },
       data: {
         status: "PENDING",
         resolved: settleAmount,
@@ -164,20 +124,20 @@ export const buy = async (
       userId: update.userId,
       symbol: update.symbol,
       price: update.price,
-      quantity: update.quantity,
+      quantity: matchedData.data.matchedQty, // only matched portion
       type: TradeType.Buy,
     });
+
     return update;
   }
 
+  // MATCHED
   const releaseAmount = matchedData.data.releaseAmount
-    ? matchedData.data.releaseAmount
+    ? Number(matchedData.data.releaseAmount)
     : 0;
-
   const settleAmount = lockamount - releaseAmount;
 
-  // console.log(settleAmount," ",releaseAmount);
-  const { data: settleData, status: settleStatus } = await callWalletService(
+  const { data: settleData, status: settleStatus } = await callService(
     "http://wallet-srv:3000/api/wallet/settle-money",
     "patch",
     {
@@ -187,16 +147,12 @@ export const buy = async (
     },
   );
 
-  // console.log("fully filld")
-  // console.log(settleData," ",settleStatus);
   if (!settleStatus || settleStatus !== 201) {
     throw new BadRequestError("problem in settling money");
   }
 
   const final = await prisma.order.update({
-    where: {
-      id: order.id,
-    },
+    where: { id: order.id },
     data: {
       status: "SUCCESS",
       resolved: settleAmount,
@@ -214,20 +170,10 @@ export const buy = async (
   return final;
 };
 
-const callWalletService = async (url: string, method: string, payload: any) => {
+const callService = async (url: string, method: string, payload: any) => {
   try {
-    const response = await axios({
-      method: method,
-
-      url,
-      data: payload,
-    });
-    // console.log(response.data);
-
-    return {
-      data: response.data,
-      status: response.status,
-    };
+    const response = await axios({ method, url, data: payload });
+    return { data: response.data, status: response.status };
   } catch (error: any) {
     return {
       data: error.response?.data,
