@@ -8,53 +8,62 @@ export const sell = async (
   userID: string,
   symbol: string,
   quantity: number,
+  price?: number,
 ) => {
-   const {data:stockprice,status:stockstatus}= await callWalletService(
+  if (!price) {
+    const { data: stockprice, status: stockstatus } = await callWalletService(
       "http://stock-srv:3000/api/stocks/internal-symbol",
       "get",
       {
-        symbol:symbol
-      }
-    )
-  
-    // console.log(stockstatus);
-  
-      // console.log(stockprice);
-    if (!stockprice) {
-      console.log("error");
-      throw new BadRequestError("not able to fetch the latest price of stock ");
-    }
-  
-    const price = stockprice.data.price
+        symbol: symbol,
+      },
+    );
+    price = stockprice.data.price;
+  }
+  //  const {data:stockprice,status:stockstatus}= await callWalletService(
+  //     "http://stock-srv:3000/api/stocks/internal-symbol",
+  //     "get",
+  //     {
+  //       symbol:symbol
+  //     }
+  //   )
+
+  //   // console.log(stockstatus);
+
+  //     // console.log(stockprice);
+  //   if (!stockprice) {
+  //     console.log("error");
+  //     throw new BadRequestError("not able to fetch the latest price of stock ");
+  //   }
+
+  // const price = stockprice.data.price
   //2. Verify holdings → Portfolio Service (sync) → fail = throw error, stop */
   // const price = 100;
   // console.log(userID);
-  const {data:holdings,status:holdingsStatus} = await callWalletService(
+  const { data: holdings, status: holdingsStatus } = await callWalletService(
     "http://portfolio-srv:3000/api/portfolio/verify",
     "get",
     {
-      userId:userID,
-      symbol:symbol
-    }
-  )
-
+      userId: userID,
+      symbol: symbol,
+    },
+  );
 
   // console.log(holdings);
-  if(holdingsStatus===400){
-    throw new BadRequestError(holdings.message)
+  if (holdingsStatus === 400) {
+    throw new BadRequestError(holdings.message);
   }
-  if (!holdingsStatus || holdingsStatus !==201) {
+  if (!holdingsStatus || holdingsStatus !== 201) {
     throw new BadRequestError("not able to verify stocks");
   }
   // console.log(quantity+ holdings.data.quantity)
-  if(quantity>holdings.data.quantity){
+  if (quantity > holdings.data.quantity) {
     throw new BadRequestError("you did not own that much quantity");
   }
 
-
   //for now i am just thinking that the stocks are mine so i am not taking care of what to do  okey
 
-  let order = await prisma.order.create({
+  const order = await prisma.order.create({
     data: {
       userId: userID,
       symbol: symbol,
@@ -62,44 +71,105 @@ export const sell = async (
       status: "CREATED",
       quantity: quantity,
       // resolved:
-      price: price,
+      price: price!,
     },
   });
 
-  const amount = price * quantity;
+  const amount = price! * quantity;
 
   //hit the matching engine now but mimick this also
 
-  const { data, status } = await callWalletService(
-    "http://wallet-srv:3000/api/wallet/credit-money",
-       "patch",
+  const { data: matchedData, status: matchedStatus } = await callWalletService(
+    "http://tradeengine-srv:3000/api/tradeengine/sell",
+    "post",
     {
-      userID,
-      amount,
+      orderId: order.id,
+      userId: order.userId,
+      price: price,
+      quantity: quantity,
+      symbol: symbol,
     },
   );
 
-  order = await prisma.order.update({
-    where: {
-      id: order.id,
-    },
-    data: {
-      resolved: price * quantity,
-      status: "SUCCESS",
-    },
+  if (!matchedStatus || matchedStatus !== 201) {
+    throw new BadRequestError("problem in matching money");
+  }
+
+  // console.log(matchedData,matchedStatus);
+
+  // return matchedData;
+
+  if (matchedData.data.status === "QUEUED") {
+    const update = await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        status: "PENDING",
+        resolved: 0,
+      },
+    });
+
+    return update;
+  }
+
+  if (matchedData.data.status === "PARTIAL") {
+    const creditAmount =
+      Number(matchedData.tradePrice) * Number(matchedData.matchedQty);
+
+    const { status: creditStatus } = await callWalletService(
+      "http://wallet-srv:3000/api/wallet/credit-money",
+      "patch",
+      {  amount: creditAmount ,userId:order.userId},
+    );
+    if (!creditStatus || creditStatus !== 201)
+      throw new BadRequestError("problem in crediting money");
+
+    const update = await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "PENDING", resolved: creditAmount },
+    });
+
+    await new SellTradePublisher(natsWrapper.client).publish({
+      userId: update.userId,
+      symbol: update.symbol,
+      price: update.price,
+      type: TradeType.Sell,
+      quantity: update.quantity,
+    });
+    return update;
+  }
+  // console.log("hi")
+  const creditAmount =
+    Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
+    // console.log(creditAmount);
+  const { status: creditStatus } = await callWalletService(
+    "http://wallet-srv:3000/api/wallet/credit-money",
+    "patch",
+    { userID, amount: creditAmount },
+  );
+
+  // console.log(creditStatus,creditAmount)
+  if (!creditStatus || creditStatus !== 201)
+    throw new BadRequestError("problem in crediting money");
+
+  const final = await prisma.order.update({
+    where: { id: order.id },
+    data: { status: "SUCCESS", resolved: creditAmount },
   });
 
   await new SellTradePublisher(natsWrapper.client).publish({
-    userId:order.userId,
-    symbol:order.symbol,
-    price:order.price,
-    type:TradeType.Sell,
-    quantity:order.quantity
-  })
-  return order;
+    userId: final.userId,
+    symbol: final.symbol,
+    price: final.price,
+    type: TradeType.Sell,
+    quantity: final.quantity,
+  });
+
+  return final;
 };
 
-const callWalletService = async (url: string, method:string,payload: any) => {
+const callWalletService = async (url: string, method: string, payload: any) => {
   try {
     const response = await axios({
       // method: "patch",
@@ -113,6 +183,7 @@ const callWalletService = async (url: string, method:string,payload: any) => {
       status: response.status,
     };
   } catch (error: any) {
+    console.log(error.response?.data);
     return {
       data: error.response?.data,
       status: error.response?.status,

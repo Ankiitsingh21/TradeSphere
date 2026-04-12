@@ -5,9 +5,9 @@ import { sell } from "../services/sell-service";
 export const sellController = async (req: Request, res: Response) => {
   try {
     const userID = req.currentUser!.id;
-    const { symbol, quantity } = req.body;
+    const { symbol, quantity, price } = req.body;
     //     console.log(userID,symbol,quantity);
-    const resp = await sell(userID, symbol, quantity);
+    const resp = await sell(userID, symbol, quantity, price);
     return res.status(201).json({
       success: true,
       data: resp,

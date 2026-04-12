@@ -24,10 +24,6 @@ export const buy = async (
       buyPrice.gte(book.marketPrice) &&
       book.seedSellQuantity.gte(remainingQty)
     ) {
-      // Direct seed match
-      book.seedSellQuantity = book.seedSellQuantity.minus(remainingQty);
-      book.lastPrice = book.marketPrice;
-
       const orderRecord = await prisma.orderBook.create({
         data: {
           orderId,
@@ -39,6 +35,9 @@ export const buy = async (
           status: TradeStatus.MATCHED,
         },
       });
+
+      book.seedSellQuantity = book.seedSellQuantity.minus(remainingQty);
+      book.lastPrice = book.marketPrice;
 
       // TODO: publish trade:executed NATS event
       // { orderId, userId, symbol, matchedQty: remainingQty, tradePrice: book.marketPrice, releaseAmount: buyPrice.minus(book.marketPrice).mul(remainingQty) }
@@ -52,7 +51,7 @@ export const buy = async (
       };
     }
 
-    // No seed available or price too low — add to queue
+    // No seed available or price too low — add to queue as original
     return await buyAddInQueue(orderId, userId, remainingQty, price, symbol);
   }
 
@@ -155,7 +154,15 @@ export const buy = async (
     // { orderId, userId, symbol, matchedQty: totalMatchedQty, tradePrice: lastTradePrice, releaseAmount: totalReleaseAmount }
 
     if (remainingQty.gt(0)) {
-      await buyAddInQueue(orderId, userId, remainingQty, price, symbol);
+      await buyAddInQueue(`${orderId}-remaining`, userId, remainingQty, price, symbol);
+      return {
+        status: "PARTIAL",
+        matchedQty: totalMatchedQty,
+        remainingQty,
+        releaseAmount: totalReleaseAmount,
+        tradePrice: lastTradePrice,
+        orderRecord,
+      };
     }
 
     return {
@@ -167,5 +174,6 @@ export const buy = async (
     };
   }
 
+  // No match at all — queue original orderId
   return await buyAddInQueue(orderId, userId, remainingQty, price, symbol);
 };

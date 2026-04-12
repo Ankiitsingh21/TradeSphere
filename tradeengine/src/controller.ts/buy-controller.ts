@@ -5,6 +5,7 @@ import { buy } from "../services/buy";
 export const buyController = async (req: Request, res: Response) => {
   try {
     const { orderId, userId, price, quantity, symbol } = req.body;
+    // console.log(orderId);
     const buyy = await buy(orderId, userId, symbol, quantity, price);
     return res.status(201).json({
       success: true,

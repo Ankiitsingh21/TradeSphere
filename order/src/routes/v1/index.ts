@@ -1,5 +1,5 @@
 import { requireAuth, validateRequest } from "@showsphere/common";
-import express,{Request,Response} from "express";
+import express, { Request, Response } from "express";
 import { body } from "express-validator";
 import { buyController } from "../../controller/buy-controller";
 import { sellController } from "../../controller/sell-controller";
@@ -34,11 +34,9 @@ router.post(
   sellController,
 );
 
-
-router.get('/health',async (req:Request,res:Response) => {
-
+router.get("/health", async (req: Request, res: Response) => {
   const date = new Date();
-  res.send({date});
+  res.send({ date });
 });
 
 export default router;

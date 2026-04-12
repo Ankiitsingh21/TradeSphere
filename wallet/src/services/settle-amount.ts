@@ -1,11 +1,14 @@
 import { BadRequestError } from "@showsphere/common";
 import { prisma } from "../config/db";
+import { Prisma } from "../generated/prisma/client";
 
 export const settlemoney = async (
   userID: string,
   settleamount: number,
   releaseamount: number,
 ) => {
+  const settleamountt = new Prisma.Decimal(settleamount);
+  const releaseamountt = new Prisma.Decimal(releaseamount);
   const settle = await prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({
       where: {
@@ -17,17 +20,19 @@ export const settlemoney = async (
       throw new BadRequestError("Wallet not found");
     }
 
-    const availb = wallet.available_balance.toNumber();
-    const totalb = wallet.total_balance.toNumber();
-    const lockb = wallet.locked_balance.toNumber();
-
-    if (settleamount + releaseamount > lockb) {
+    const availb = wallet.available_balance;
+    // const availb =  new Prisma.Decimal(availbb);
+    const total = wallet.total_balance;
+    const lockb = wallet.locked_balance;
+    // console.log(lockb);
+    // const lockb= new Prisma.Decimal(lockbb);
+    if (settleamountt.add(releaseamountt).greaterThan( lockb)) {
+      // console.log((settleamountt+releaseamountt>lockb));
       throw new BadRequestError("loacked balance is inusfficient");
     }
-
-    const newL = lockb - (settleamount + releaseamount);
-    const newaB = availb + releaseamount;
-    const newT = newaB + newL;
+    const newL = lockb.minus(settleamountt.add(releaseamountt));
+    const newaB = availb.add(releaseamountt);
+    const newT = newaB.add(newL);
 
     const update = await tx.wallet.update({
       where: {
@@ -44,7 +49,7 @@ export const settlemoney = async (
       data: {
         walletId: wallet.id,
         userId: wallet.userId,
-        amount: settleamount,
+        amount: settleamountt,
         type: "SETTLE",
       },
     });
@@ -52,7 +57,7 @@ export const settlemoney = async (
     const transc = await tx.transactions.create({
       data: {
         type: "UNLOCK",
-        amount: releaseamount,
+        amount: releaseamountt,
         userId: wallet.userId,
         walletId: wallet.id,
       },

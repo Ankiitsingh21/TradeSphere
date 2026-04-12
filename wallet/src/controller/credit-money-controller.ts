@@ -6,6 +6,7 @@ export const creditMoney = async (req: Request, res: Response) => {
   try {
     //     const userID = req.currentUser!.id;
     const { amount, userID } = req.body;
+    console.log(amount,userID);
     const cred = await credit(userID, amount);
     return res.status(201).json({
       success: true,

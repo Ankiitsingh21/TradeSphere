@@ -24,7 +24,6 @@ export const sell = async (
       sellPrice.lte(book.marketPrice) &&
       book.seedBuyQuantity.gte(remainingQty)
     ) {
-      // Direct seed match — seller gets market price
       book.seedBuyQuantity = book.seedBuyQuantity.minus(remainingQty);
       book.lastPrice = book.marketPrice;
 
@@ -51,6 +50,7 @@ export const sell = async (
       };
     }
 
+    // No seed available or price too high — queue original
     return await sellAddInQueue(orderId, userId, remainingQty, price, symbol);
   }
 
@@ -148,7 +148,14 @@ export const sell = async (
     // { orderId, userId, symbol, matchedQty: totalMatchedQty, tradePrice: lastTradePrice }
 
     if (remainingQty.gt(0)) {
-      await sellAddInQueue(orderId, userId, remainingQty, price, symbol);
+      await sellAddInQueue(`${orderId}-remaining`, userId, remainingQty, price, symbol);
+      return {
+        status: "PARTIAL",
+        matchedQty: totalMatchedQty,
+        remainingQty,
+        tradePrice: lastTradePrice,
+        orderRecord,
+      };
     }
 
     return {
@@ -159,5 +166,6 @@ export const sell = async (
     };
   }
 
+  // No match at all — queue original orderId
   return await sellAddInQueue(orderId, userId, remainingQty, price, symbol);
 };

@@ -82,14 +82,13 @@ router.patch(
 router.patch(
   "/credit-money",
   // requireAuth,
-  [
-    body("amount")
-      .isFloat({ gt: 0 })
-      .notEmpty()
-      .withMessage("amount can not be negative"),
-    body("userID").notEmpty().withMessage("user ID must be present"),
-  ],
-  validateRequest,
+  // [
+  //   body("amount")
+  //     .notEmpty()
+  //     .withMessage("amount can not be negative"),
+  //   body("userID").notEmpty().withMessage("user ID must be present"),
+  // ],
+  // validateRequest,
   creditMoney,
 );
 

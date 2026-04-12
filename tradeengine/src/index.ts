@@ -1,7 +1,7 @@
 import { app } from "./app";
 import { connectDB } from "./config/db";
+import { SeedEventListener } from "./events/listeners/seed-event-listener";
 import { natsWrapper } from "./natswrapper";
-import { seedOrderBooks } from "./orderBook/seedOrderBook";
 // import {runCompleteMatchingSimulation} from "./services/orderManages";
 
 const start = async () => {
@@ -22,7 +22,7 @@ const start = async () => {
   }
   // await runCompleteMatchingSimulation();
   await connectDB();
-  await seedOrderBooks();
+  // await seedOrderBooks();
 
   try {
     await natsWrapper.connect(
@@ -38,6 +38,8 @@ const start = async () => {
 
     process.on("SIGINT", () => natsWrapper.client.close());
     process.on("SIGTERM", () => natsWrapper.client.close());
+
+    new SeedEventListener(natsWrapper.client).listen();
   } catch (error) {
     console.error("NATS connection failed, exiting", error);
     process.exit(1);
