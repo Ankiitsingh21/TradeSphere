@@ -4,6 +4,8 @@ import { getOrderBook } from "../orderBook/map";
 import { prisma } from "../config/db";
 import { OrderNode } from "../orderBook/queue";
 import { sellAddInQueue } from "../orderBook/addInQueue";
+import { natsWrapper } from "../natswrapper";
+import { TradeExecutedPublisher } from "../events/publishers/trade-event-publisher";
 
 export const sell = async (
   orderId: string,
@@ -17,7 +19,7 @@ export const sell = async (
 
   const book = getOrderBook(symbol);
 
-  // Case 1: Buy heap is empty — try seed match
+  // Case 1: Buy heap empty — try seed match
   if (book.buyHeap.isEmpty()) {
     if (
       book.marketPrice &&
@@ -39,9 +41,7 @@ export const sell = async (
         },
       });
 
-      // TODO: publish trade:executed NATS event
-      // { orderId, userId, symbol, matchedQty: remainingQty, tradePrice: book.marketPrice }
-
+      // Seed has no real counterparty — no TradeExecuted needed
       return {
         status: "MATCHED",
         matchedQty: remainingQty,
@@ -50,11 +50,10 @@ export const sell = async (
       };
     }
 
-    // No seed available or price too high — queue original
     return await sellAddInQueue(orderId, userId, remainingQty, price, symbol);
   }
 
-  // Case 2: Buy heap has real orders — run matching loop
+  // Case 2: Real buy heap — check price
   const firstBuyer = book.buyHeap.front();
   if (firstBuyer!.price.lessThan(sellPrice)) {
     return await sellAddInQueue(orderId, userId, remainingQty, price, symbol);
@@ -74,22 +73,31 @@ export const sell = async (
     }
 
     const tradePrice = buyer.price;
+    // Buyer locked at buyer.price, trades at sellPrice — difference is refunded
+    const buyerReleaseAmount = buyer.price.minus(sellPrice);
 
     if (remainingQty.equals(buyer.quantity)) {
-      // Exact match
+      // Exact match — buyer fully consumed
       await prisma.orderBook.update({
         where: { id: buyer.id },
         data: { status: TradeStatus.MATCHED },
       });
-
       book.buyHeap.dequeue();
 
       totalMatchedQty = totalMatchedQty.plus(remainingQty);
       lastTradePrice = tradePrice;
       remainingQty = new Prisma.Decimal(0);
 
-      // TODO: publish trade:executed NATS event for buyer
-      // { orderId: buyer.orderId, userId: buyer.userId, symbol, matchedQty: buyer.quantity, tradePrice, releaseAmount: (buyer.price - sellPrice) * qty }
+      // Buyer was QUEUED — notify Order Service to settle them
+      await new TradeExecutedPublisher(natsWrapper.client).publish({
+        orderId: buyer.orderId,
+        userId: buyer.userId,
+        symbol,
+        matchedQty: buyer.quantity,
+        tradePrice: sellPrice, // trade happens at seller's ask price
+        type: TradeType.Buy,
+        releaseAmount: buyerReleaseAmount.mul(buyer.quantity),
+      });
 
     } else if (remainingQty.greaterThan(buyer.quantity)) {
       // Buyer fully consumed, seller still has remaining
@@ -97,35 +105,41 @@ export const sell = async (
         where: { id: buyer.id },
         data: { status: TradeStatus.MATCHED },
       });
-
       book.buyHeap.dequeue();
 
       totalMatchedQty = totalMatchedQty.plus(buyer.quantity);
       lastTradePrice = tradePrice;
       remainingQty = remainingQty.minus(buyer.quantity);
 
-      // TODO: publish trade:executed NATS event for buyer
+      // Buyer was QUEUED — notify Order Service to settle them
+      await new TradeExecutedPublisher(natsWrapper.client).publish({
+        orderId: buyer.orderId,
+        userId: buyer.userId,
+        symbol,
+        matchedQty: buyer.quantity,
+        tradePrice: sellPrice,
+        type: TradeType.Buy,
+        releaseAmount: buyerReleaseAmount.mul(buyer.quantity),
+      });
 
     } else {
-      // Seller fully consumed, buyer partially consumed
+      // Seller fully consumed, buyer partially consumed — buyer stays in queue
       const remaining = buyer.quantity.minus(remainingQty);
 
       await prisma.orderBook.update({
         where: { id: buyer.id },
         data: { quantity: remaining },
       });
-
       book.buyHeap.dequeue();
 
-      const updatedBuyer: OrderNode = {
-        ...buyer,
-        quantity: remaining,
-      };
+      const updatedBuyer: OrderNode = { ...buyer, quantity: remaining };
       book.buyHeap.enqueue(updatedBuyer);
 
       totalMatchedQty = totalMatchedQty.plus(remainingQty);
       lastTradePrice = tradePrice;
       remainingQty = new Prisma.Decimal(0);
+
+      // Buyer is NOT fully done — no TradeExecuted yet, they stay PENDING
     }
   }
 
@@ -143,9 +157,6 @@ export const sell = async (
     });
 
     book.lastPrice = lastTradePrice;
-
-    // TODO: publish trade:executed NATS event for seller
-    // { orderId, userId, symbol, matchedQty: totalMatchedQty, tradePrice: lastTradePrice }
 
     if (remainingQty.gt(0)) {
       await sellAddInQueue(`${orderId}-remaining`, userId, remainingQty, price, symbol);
@@ -166,6 +177,5 @@ export const sell = async (
     };
   }
 
-  // No match at all — queue original orderId
   return await sellAddInQueue(orderId, userId, remainingQty, price, symbol);
 };
