@@ -1,8 +1,14 @@
 import { prismaMock } from "../../__mocks__/prisma";
-jest.mock("../../config/db", () => ({ prisma: prismaMock }));
+
+jest.mock("../../config/db", () => {
+  const { prismaMock } = require("../../__mocks__/prisma");
+  return { prisma: prismaMock };
+});
 
 import axios from "axios";
 jest.mock("axios");
+
+jest.mock("../../natswrapper");
 
 const mockedAxios = axios as jest.MockedFunction<typeof axios>;
 

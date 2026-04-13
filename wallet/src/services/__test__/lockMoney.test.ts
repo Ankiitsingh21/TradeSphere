@@ -1,6 +1,11 @@
 import { prismaMock } from "../../__mocks__/prisma";
 
-jest.mock("../../config/db", () => ({ prisma: prismaMock }));
+jest.mock("../../config/db", () => {
+  const { prismaMock } = require("../../__mocks__/prisma");
+  return { prisma: prismaMock };
+});
+
+
 
 import { lockmoney } from "../../services/lockMoney";
 import { BadRequestError } from "@showsphere/common";
