@@ -64,6 +64,13 @@ export const sell = async (
   );
 
   if (!matchedStatus || matchedStatus !== 201) {
+    const update = await prisma.order.update({
+      where:{
+        id:order.id
+      },data:{
+        status:"FAILED"
+      }
+    })
     throw new BadRequestError("problem in matching engine");
   }
 

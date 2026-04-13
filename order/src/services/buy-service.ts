@@ -76,6 +76,18 @@ export const buy = async (
   );
 
   if (!matchedStatus || matchedStatus !== 201) {
+    const update = await prisma.order.update({
+      where:{
+        id:order.id
+      },data:{
+        status:"FAILED"
+      }
+    }); 
+    const {data:settle,status:settleStatus}= await callService("http://wallet-srv:3000/api/wallet/settle-money","patch",{
+      settleamount:0,
+      releaseamount:lockamount,
+      userID,
+    });
     throw new BadRequestError("problem in matching engine");
   }
 
@@ -95,7 +107,7 @@ export const buy = async (
     const priceDiffSavings = matchedData.data.releaseAmount
       ? Number(matchedData.data.releaseAmount)
       : 0;
-    const settleAmount = lockamount - priceDiffSavings;
+    const settleAmount = Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
 
     const { data: settleData, status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
