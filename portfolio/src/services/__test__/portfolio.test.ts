@@ -27,7 +27,9 @@ describe("Portfolio buy service", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("should create new portfolio entry if stock not owned", async () => {
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.portfolio.findUnique.mockResolvedValue(null);
     prismaMock.portfolio.create.mockResolvedValue(mockPortfolio);
 
@@ -41,7 +43,9 @@ describe("Portfolio buy service", () => {
       ...mockPortfolio,
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.portfolio.findUnique.mockResolvedValue(existing);
 
     prismaMock.portfolio.update.mockResolvedValue({
@@ -56,7 +60,9 @@ describe("Portfolio buy service", () => {
   });
 
   it("should throw if quantity is 0 or negative", async () => {
-    await expect(buy("user-1", "RELIANCE", 2000, 0)).rejects.toThrow(BadRequestError);
+    await expect(buy("user-1", "RELIANCE", 2000, 0)).rejects.toThrow(
+      BadRequestError,
+    );
   });
 });
 
@@ -68,7 +74,9 @@ describe("Portfolio sell service", () => {
       ...mockPortfolio,
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.portfolio.findUnique.mockResolvedValue(existing);
 
     prismaMock.portfolio.update.mockResolvedValue({
@@ -87,7 +95,9 @@ describe("Portfolio sell service", () => {
       quantity: new Prisma.Decimal(5),
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.portfolio.findUnique.mockResolvedValue(existing);
 
     prismaMock.portfolio.delete.mockResolvedValue(existing);
@@ -104,17 +114,25 @@ describe("Portfolio sell service", () => {
       quantity: new Prisma.Decimal(5),
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.portfolio.findUnique.mockResolvedValue(existing);
 
-    await expect(sell("user-1", "RELIANCE", 2000, 100)).rejects.toThrow(BadRequestError);
+    await expect(sell("user-1", "RELIANCE", 2000, 100)).rejects.toThrow(
+      BadRequestError,
+    );
   });
 
   it("should throw if stock not in portfolio", async () => {
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.portfolio.findUnique.mockResolvedValue(null);
 
-    await expect(sell("user-1", "RELIANCE", 2000, 5)).rejects.toThrow(BadRequestError);
+    await expect(sell("user-1", "RELIANCE", 2000, 5)).rejects.toThrow(
+      BadRequestError,
+    );
   });
 });
 
@@ -130,6 +148,8 @@ describe("Portfolio verify service", () => {
   it("should throw if stock not owned", async () => {
     prismaMock.portfolio.findUnique.mockResolvedValue(null);
 
-    await expect(verifyy("user-1", "RELIANCE")).rejects.toThrow(BadRequestError);
+    await expect(verifyy("user-1", "RELIANCE")).rejects.toThrow(
+      BadRequestError,
+    );
   });
 });

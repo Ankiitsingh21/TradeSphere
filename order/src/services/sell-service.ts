@@ -129,7 +129,7 @@ export const sell = async (
     await new SellTradePublisher(natsWrapper.client).publish({
       userId: update.userId,
       symbol: update.symbol,
-      price: matchedData.data.tradePrice, 
+      price: matchedData.data.tradePrice,
       type: TradeType.Sell,
       quantity: matchedData.data.matchedQty,
     });
@@ -163,7 +163,7 @@ export const sell = async (
   await new SellTradePublisher(natsWrapper.client).publish({
     userId: final.userId,
     symbol: final.symbol,
-    price: matchedData.data.tradePrice, 
+    price: matchedData.data.tradePrice,
     type: TradeType.Sell,
     quantity: final.matchedQuantity,
   });

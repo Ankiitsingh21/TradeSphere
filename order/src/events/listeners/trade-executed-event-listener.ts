@@ -12,7 +12,6 @@ import { SellTradePublisher } from "../publishers/sell-trade-event";
 import { natsWrapper } from "../../natswrapper";
 import { queueGroupName } from "../queueGroupName";
 
-
 export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
   subject: Subjects.TradeExecuted = Subjects.TradeExecuted;
   queueGroupName = queueGroupName;

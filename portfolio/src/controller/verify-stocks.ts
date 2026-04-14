@@ -4,10 +4,8 @@ import { verifyy } from "../services/verify-holdings";
 
 export const verifyController = async (req: Request, res: Response) => {
   try {
-    const userId =
-      (req.query.userId as string) || (req.body.userId as string);
-    const symbol =
-      (req.query.symbol as string) || (req.body.symbol as string);
+    const userId = (req.query.userId as string) || (req.body.userId as string);
+    const symbol = (req.query.symbol as string) || (req.body.symbol as string);
 
     if (!userId || !symbol) {
       return res.status(400).json({

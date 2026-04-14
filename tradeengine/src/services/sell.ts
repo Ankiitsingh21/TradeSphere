@@ -35,7 +35,7 @@ export const sell = async (
           userId,
           symbol,
           totalQuantity: remainingQty,
-          matchedQuantity:remainingQty,
+          matchedQuantity: remainingQty,
           price: book.marketPrice,
           type: TradeType.Sell,
           status: TradeStatus.MATCHED,
@@ -81,7 +81,7 @@ export const sell = async (
       // Exact match — buyer fully consumed
       await prisma.orderBook.update({
         where: { id: buyer.id },
-        data: { status: TradeStatus.MATCHED ,matchedQuantity:remainingQty},
+        data: { status: TradeStatus.MATCHED, matchedQuantity: remainingQty },
       });
       book.buyHeap.dequeue();
 
@@ -99,12 +99,11 @@ export const sell = async (
         type: TradeType.Buy,
         releaseAmount: buyerReleaseAmount.mul(buyer.quantity),
       });
-
     } else if (remainingQty.greaterThan(buyer.quantity)) {
       // Buyer fully consumed, seller still has remaining
       await prisma.orderBook.update({
         where: { id: buyer.id },
-        data: { status: TradeStatus.MATCHED ,matchedQuantity:buyer.quantity},
+        data: { status: TradeStatus.MATCHED, matchedQuantity: buyer.quantity },
       });
       book.buyHeap.dequeue();
 
@@ -122,14 +121,13 @@ export const sell = async (
         type: TradeType.Buy,
         releaseAmount: buyerReleaseAmount.mul(buyer.quantity),
       });
-
     } else {
       // Seller fully consumed, buyer partially consumed — buyer stays in queue
       const remaining = buyer.quantity.minus(remainingQty);
 
       await prisma.orderBook.update({
         where: { id: buyer.id },
-        data: { matchedQuantity:remainingQty  },
+        data: { matchedQuantity: remainingQty },
       });
       book.buyHeap.dequeue();
 
@@ -145,7 +143,9 @@ export const sell = async (
   }
 
   if (totalMatchedQty.gt(0)) {
-    const finalStatus = remainingQty.gt(0) ? TradeStatus.PARTIAL : TradeStatus.MATCHED;
+    const finalStatus = remainingQty.gt(0)
+      ? TradeStatus.PARTIAL
+      : TradeStatus.MATCHED;
 
     const orderRecord = await prisma.orderBook.create({
       data: {
@@ -163,7 +163,13 @@ export const sell = async (
     book.lastPrice = lastTradePrice;
 
     if (remainingQty.gt(0)) {
-      await sellAddInQueue(`${orderId}-remaining`, userId, remainingQty, price, symbol);
+      await sellAddInQueue(
+        `${orderId}-remaining`,
+        userId,
+        remainingQty,
+        price,
+        symbol,
+      );
       return {
         status: "PARTIAL",
         matchedQty: totalMatchedQty,

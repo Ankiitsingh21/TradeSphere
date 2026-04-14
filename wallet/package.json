@@ -7,8 +7,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jest --runInBand",
-  "test:watch": "jest --watch --runInBand",
-  "test:coverage": "jest --coverage --runInBand"
+    "test:watch": "jest --watch --runInBand",
+    "test:coverage": "jest --coverage --runInBand"
   },
   "type": "commonjs",
   "devDependencies": {

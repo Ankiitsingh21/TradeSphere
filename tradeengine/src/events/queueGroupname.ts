@@ -1,1 +1,1 @@
-export const queueGroupName= "trade-engine"
+export const queueGroupName = "trade-engine";

@@ -5,7 +5,6 @@ jest.mock("../../config/db", () => {
   return { prisma: prismaMock };
 });
 
-
 import { credit } from "../../services/creditMoney";
 import { BadRequestError } from "@showsphere/common";
 
@@ -25,7 +24,9 @@ describe("creditMoney service", () => {
 
   it("should credit money and create CREDIT transaction", async () => {
     prismaMock.wallet.findUnique.mockResolvedValue(mockWallet);
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.wallet.update.mockResolvedValue({
       ...mockWallet,
       available_balance: 5000 as any,

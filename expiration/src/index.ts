@@ -27,7 +27,6 @@ const start = async () => {
     process.on("SIGTERM", () => natsWrapper.client.close());
 
     new TradeOrderCreatedListener(natsWrapper.client).listen();
-
   } catch (err) {
     // throw new DatabaseConnectionError()
     return;

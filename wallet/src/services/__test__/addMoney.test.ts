@@ -5,7 +5,6 @@ jest.mock("../../config/db", () => {
   return { prisma: prismaMock };
 });
 
-
 import { addmoney } from "../../services/addMoney";
 import { BadRequestError } from "@showsphere/common";
 
@@ -25,7 +24,7 @@ describe("addMoney service", () => {
 
   it("should add money and create transaction", async () => {
     prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock)
+      fn(prismaMock),
     );
     prismaMock.wallet.findUnique.mockResolvedValue(mockWallet);
     prismaMock.wallet.update.mockResolvedValue({
@@ -49,7 +48,7 @@ describe("addMoney service", () => {
 
   it("should throw if wallet not found", async () => {
     prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock)
+      fn(prismaMock),
     );
     prismaMock.wallet.findUnique.mockResolvedValue(null);
 

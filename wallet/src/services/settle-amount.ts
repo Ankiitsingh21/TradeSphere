@@ -26,7 +26,7 @@ export const settlemoney = async (
     const lockb = wallet.locked_balance;
     // console.log(lockb);
     // const lockb= new Prisma.Decimal(lockbb);
-    if (settleamountt.add(releaseamountt).greaterThan( lockb)) {
+    if (settleamountt.add(releaseamountt).greaterThan(lockb)) {
       // console.log((settleamountt+releaseamountt>lockb));
       throw new BadRequestError("loacked balance is inusfficient");
     }

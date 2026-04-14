@@ -25,7 +25,9 @@ describe("settleMoney service", () => {
       updatedAt: new Date(),
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.wallet.findUnique.mockResolvedValue(wallet);
 
     prismaMock.wallet.update.mockResolvedValue({
@@ -57,10 +59,14 @@ describe("settleMoney service", () => {
       updatedAt: new Date(),
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.wallet.findUnique.mockResolvedValue(wallet);
 
-    await expect(settlemoney("user-1", 800, 300)).rejects.toThrow(BadRequestError);
+    await expect(settlemoney("user-1", 800, 300)).rejects.toThrow(
+      BadRequestError,
+    );
   });
 
   it("should allow releaseamount of 0 (full settle, no savings)", async () => {
@@ -75,7 +81,9 @@ describe("settleMoney service", () => {
       updatedAt: new Date(),
     };
 
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.wallet.findUnique.mockResolvedValue(wallet);
 
     prismaMock.wallet.update.mockResolvedValue({
@@ -94,9 +102,13 @@ describe("settleMoney service", () => {
   });
 
   it("should throw if wallet not found", async () => {
-    prismaMock.$transaction.mockImplementation(async (fn: any) => fn(prismaMock));
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.wallet.findUnique.mockResolvedValue(null);
 
-    await expect(settlemoney("user-1", 500, 0)).rejects.toThrow(BadRequestError);
+    await expect(settlemoney("user-1", 500, 0)).rejects.toThrow(
+      BadRequestError,
+    );
   });
 });

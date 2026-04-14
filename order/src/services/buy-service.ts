@@ -81,11 +81,15 @@ export const buy = async (
       where: { id: order.id },
       data: { status: "FAILED" },
     });
-    await callService("http://wallet-srv:3000/api/wallet/settle-money", "patch", {
-      settleamount: 0,
-      releaseamount: lockamount,
-      userID,
-    });
+    await callService(
+      "http://wallet-srv:3000/api/wallet/settle-money",
+      "patch",
+      {
+        settleamount: 0,
+        releaseamount: lockamount,
+        userID,
+      },
+    );
     throw new BadRequestError("problem in matching engine");
   }
 
@@ -103,7 +107,7 @@ export const buy = async (
       },
     });
 
-    new TradeOrderCreated(natsWrapper.client).publish({
+    await new TradeOrderCreated(natsWrapper.client).publish({
       orderId: update.id,
       expiresAt: update.expiresAt!.toISOString(),
     });
@@ -145,7 +149,7 @@ export const buy = async (
       },
     });
 
-    new TradeOrderCreated(natsWrapper.client).publish({
+    await new TradeOrderCreated(natsWrapper.client).publish({
       orderId: update.id,
       expiresAt: update.expiresAt!.toISOString(),
     });
@@ -153,7 +157,7 @@ export const buy = async (
     new BuyTradePublisher(natsWrapper.client).publish({
       userId: update.userId,
       symbol: update.symbol,
-      price: matchedData.data.tradePrice, 
+      price: matchedData.data.tradePrice,
       quantity: matchedData.data.matchedQty,
       type: TradeType.Buy,
     });
@@ -193,7 +197,7 @@ export const buy = async (
   await new BuyTradePublisher(natsWrapper.client).publish({
     userId: final.userId,
     symbol: final.symbol,
-    price: matchedData.data.tradePrice, 
+    price: matchedData.data.tradePrice,
     quantity: final.matchedQuantity,
     type: TradeType.Buy,
   });

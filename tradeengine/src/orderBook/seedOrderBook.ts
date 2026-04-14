@@ -35,25 +35,19 @@ const SEED_QUANTITY = new Prisma.Decimal(100000);
 //   }
 // };
 
-
-export const seed= async(stocks:Stock[])=>{
-  for(const stock of stocks){
-    const book=getOrderBook(stock.symbol);
-    const price= new Prisma.Decimal(stock.price);
-    book.marketPrice=price;
-    book.seedSellQuantity=SEED_QUANTITY;
-    book.seedBuyQuantity=SEED_QUANTITY;
+export const seed = async (stocks: Stock[]) => {
+  for (const stock of stocks) {
+    const book = getOrderBook(stock.symbol);
+    const price = new Prisma.Decimal(stock.price);
+    book.marketPrice = price;
+    book.seedSellQuantity = SEED_QUANTITY;
+    book.seedBuyQuantity = SEED_QUANTITY;
   }
 
-      console.log(`Seeded order books for ${stocks.length} stocks`);
+  console.log(`Seeded order books for ${stocks.length} stocks`);
 
   return true;
-
-}
-
-
-
-
+};
 
 // const callWalletService = async (url: string,method:string, payload?: any) => {
 //   try {
