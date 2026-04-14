@@ -64,11 +64,10 @@ router.patch(
   "/settle-money",
   [
     body("settleamount")
-      .isFloat({ gt: 0 })
       .notEmpty()
       .withMessage("settleamount must be positive"),
     body("releaseamount")
-      .isFloat({ min: 0 }) // allows 0 — no notEmpty() since 0 is valid
+    .notEmpty()
       .withMessage("releaseamount must be a number >= 0"),
     body("userID").notEmpty().withMessage("user ID must be present"),
   ],
