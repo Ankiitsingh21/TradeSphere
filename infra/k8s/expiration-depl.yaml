@@ -25,7 +25,7 @@ spec:
               value: "http://nats-srv:4222"
 
             - name: NATS_CLUSTER_ID
-              value: ticketing
+              value: tradesphere
 
             - name: REDIS_HOST
               value: redis-expiration-srv

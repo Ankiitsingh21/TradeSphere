@@ -7,7 +7,6 @@ import { TradeOrderCreated } from "../events/publishers/trade-order-created-even
 
 const EXPRIATION_WINDOW_SECOND = 10;
 
-
 export const sell = async (
   userID: string,
   symbol: string,
@@ -33,7 +32,7 @@ export const sell = async (
     "get",
     {},
   );
-  // console.log(holdings);
+
   if (holdingsStatus === 400) {
     throw new BadRequestError(holdings.message);
   }
@@ -68,33 +67,30 @@ export const sell = async (
   );
 
   if (!matchedStatus || matchedStatus !== 201) {
-    const update = await prisma.order.update({
-      where: {
-        id: order.id,
-      },
-      data: {
-        status: "FAILED",
-      },
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "FAILED" },
     });
     throw new BadRequestError("problem in matching engine");
   }
 
-  // matchedData = { success: true, data: { status, ... }, message }
   if (matchedData.data.status === "QUEUED") {
     const expiration = new Date();
-    expiration.setSeconds(expiration.getSeconds()+EXPRIATION_WINDOW_SECOND);
+    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
         status: "PENDING",
-        expiresAt:expiration
+        expiresAt: expiration,
       },
     });
 
     new TradeOrderCreated(natsWrapper.client).publish({
-      orderId:update.id,
-      expiresAt:update.expiresAt!.toISOString()
+      orderId: update.id,
+      expiresAt: update.expiresAt!.toISOString(),
     });
+
     return update;
   }
 
@@ -105,7 +101,7 @@ export const sell = async (
     const { status: creditStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
-      { amount: creditAmount, userID: order.userId }, // userID not userId
+      { amount: creditAmount, userID: order.userId },
     );
 
     if (!creditStatus || creditStatus !== 201) {
@@ -113,26 +109,27 @@ export const sell = async (
     }
 
     const expiration = new Date();
-    expiration.setSeconds(expiration.getSeconds()+EXPRIATION_WINDOW_SECOND);
+    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
         status: "PENDING",
         resolved: creditAmount,
         matchedQuantity: matchedData.data.matchedQty,
-        expiresAt:expiration
+        expiresAt: expiration,
       },
     });
 
     new TradeOrderCreated(natsWrapper.client).publish({
-      orderId:update.id,
-      expiresAt:update.expiresAt!.toISOString()
+      orderId: update.id,
+      expiresAt: update.expiresAt!.toISOString(),
     });
 
     await new SellTradePublisher(natsWrapper.client).publish({
       userId: update.userId,
       symbol: update.symbol,
-      price: update.price,
+      price: matchedData.data.tradePrice, 
       type: TradeType.Sell,
       quantity: matchedData.data.matchedQty,
     });
@@ -166,7 +163,7 @@ export const sell = async (
   await new SellTradePublisher(natsWrapper.client).publish({
     userId: final.userId,
     symbol: final.symbol,
-    price: final.price,
+    price: matchedData.data.tradePrice, 
     type: TradeType.Sell,
     quantity: final.matchedQuantity,
   });

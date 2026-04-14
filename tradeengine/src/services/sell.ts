@@ -145,6 +145,8 @@ export const sell = async (
   }
 
   if (totalMatchedQty.gt(0)) {
+    const finalStatus = remainingQty.gt(0) ? TradeStatus.PARTIAL : TradeStatus.MATCHED;
+
     const orderRecord = await prisma.orderBook.create({
       data: {
         orderId,
@@ -154,7 +156,7 @@ export const sell = async (
         matchedQuantity: totalMatchedQty,
         price: lastTradePrice,
         type: TradeType.Sell,
-        status: TradeStatus.MATCHED,
+        status: finalStatus,
       },
     });
 

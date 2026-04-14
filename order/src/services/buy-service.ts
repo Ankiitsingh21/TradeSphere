@@ -1,4 +1,4 @@
-import { BadRequestError, Subjects, TradeType } from "@showsphere/common";
+import { BadRequestError, TradeType } from "@showsphere/common";
 import { prisma } from "../config/db";
 import axios from "axios";
 import { BuyTradePublisher } from "../events/publishers/buy-trade-event";
@@ -44,8 +44,6 @@ export const buy = async (
   } catch (error: any) {
     status = error.response?.status;
     data = error.response?.data;
-    console.log("lock-money status:", error.response?.status);
-    console.log("lock-money message:", error.response?.data);
   }
 
   if (status === 400) {
@@ -79,44 +77,37 @@ export const buy = async (
   );
 
   if (!matchedStatus || matchedStatus !== 201) {
-    const update = await prisma.order.update({
-      where: {
-        id: order.id,
-      },
-      data: {
-        status: "FAILED",
-      },
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "FAILED" },
     });
-    const { data: settle, status: settleStatus } = await callService(
-      "http://wallet-srv:3000/api/wallet/settle-money",
-      "patch",
-      {
-        settleamount: 0,
-        releaseamount: lockamount,
-        userID,
-      },
-    );
+    await callService("http://wallet-srv:3000/api/wallet/settle-money", "patch", {
+      settleamount: 0,
+      releaseamount: lockamount,
+      userID,
+    });
     throw new BadRequestError("problem in matching engine");
   }
 
   const expiration = new Date();
-  expiration.setSeconds( expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
-  // matchedData = { success: true, data: { status, ... }, message }
+  expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+
   if (matchedData.data.status === "QUEUED") {
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
         status: "PENDING",
         resolved: 0,
-        matchedQuantity:0,
-        expiresAt:expiration
+        matchedQuantity: 0,
+        expiresAt: expiration,
       },
     });
 
     new TradeOrderCreated(natsWrapper.client).publish({
-      orderId:update.id,
-      expiresAt:update.expiresAt!.toISOString()
+      orderId: update.id,
+      expiresAt: update.expiresAt!.toISOString(),
     });
+
     return update;
   }
 
@@ -136,43 +127,41 @@ export const buy = async (
         userID,
       },
     );
-    // console.log("partial buy filled", settleData, settleStatus);
 
     if (!settleStatus || settleStatus !== 201) {
       throw new BadRequestError("problem in settling money");
     }
 
     const expiration = new Date();
-    expiration.setSeconds(expiration.getSeconds()+EXPRIATION_WINDOW_SECOND);
+    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
         status: "PENDING",
         resolved: settleAmount,
         matchedQuantity: matchedData.data.matchedQty,
-        expiresAt:expiration
+        expiresAt: expiration,
       },
     });
 
     new TradeOrderCreated(natsWrapper.client).publish({
-      orderId:update.id,
-      expiresAt:update.expiresAt!.toISOString()
+      orderId: update.id,
+      expiresAt: update.expiresAt!.toISOString(),
     });
 
-
-     new BuyTradePublisher(natsWrapper.client).publish({
+    new BuyTradePublisher(natsWrapper.client).publish({
       userId: update.userId,
       symbol: update.symbol,
-      price: update.price,
-      quantity: matchedData.data.matchedQty, 
+      price: matchedData.data.tradePrice, 
+      quantity: matchedData.data.matchedQty,
       type: TradeType.Buy,
     });
-
-  
 
     return update;
   }
 
+  // MATCHED
   const releaseAmount = matchedData.data.releaseAmount
     ? Number(matchedData.data.releaseAmount)
     : 0;
@@ -204,7 +193,7 @@ export const buy = async (
   await new BuyTradePublisher(natsWrapper.client).publish({
     userId: final.userId,
     symbol: final.symbol,
-    price: final.price,
+    price: matchedData.data.tradePrice, 
     quantity: final.matchedQuantity,
     type: TradeType.Buy,
   });

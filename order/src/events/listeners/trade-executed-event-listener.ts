@@ -10,8 +10,8 @@ import axios from "axios";
 import { BuyTradePublisher } from "../publishers/buy-trade-event";
 import { SellTradePublisher } from "../publishers/sell-trade-event";
 import { natsWrapper } from "../../natswrapper";
+import { queueGroupName } from "../queueGroupName";
 
-export const queueGroupName = "order-service";
 
 export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
   subject: Subjects.TradeExecuted = Subjects.TradeExecuted;
@@ -52,7 +52,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
     order: any,
     data: TradeExecutedEvent["data"],
   ) {
-    const lockamount = Number(order.price) * Number(order.quantity);
+    const lockamount = Number(order.price) * Number(order.totalQuantity);
     const releaseAmount = data.releaseAmount ? Number(data.releaseAmount) : 0;
     const settleAmount = lockamount - releaseAmount;
 
