@@ -1,5 +1,6 @@
 import { app } from "./app";
 import { connectDB } from "./config/db";
+import { ExpirationCompleteListener } from "./events/listeners/Expiration-complete-event";
 import { SeedEventListener } from "./events/listeners/seed-event-listener";
 import { natsWrapper } from "./natswrapper";
 // import {runCompleteMatchingSimulation} from "./services/orderManages";
@@ -40,6 +41,7 @@ const start = async () => {
     process.on("SIGTERM", () => natsWrapper.client.close());
 
     new SeedEventListener(natsWrapper.client).listen();
+    new ExpirationCompleteListener(natsWrapper.client).listen();
   } catch (error) {
     console.error("NATS connection failed, exiting", error);
     process.exit(1);

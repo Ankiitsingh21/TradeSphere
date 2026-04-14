@@ -1,3 +1,4 @@
+import { TradeOrderCreatedListener } from "./events/listeners/TradeOrderCreated-listener";
 import { natsWrapper } from "./natswrapper";
 
 const start = async () => {
@@ -24,6 +25,8 @@ const start = async () => {
 
     process.on("SIGINT", () => natsWrapper.client.close());
     process.on("SIGTERM", () => natsWrapper.client.close());
+
+    new TradeOrderCreatedListener(natsWrapper.client).listen();
 
   } catch (err) {
     // throw new DatabaseConnectionError()

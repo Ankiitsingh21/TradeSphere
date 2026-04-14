@@ -3,6 +3,10 @@ import { prisma } from "../config/db";
 import { BadRequestError, TradeType } from "@showsphere/common";
 import { SellTradePublisher } from "../events/publishers/sell-trade-event";
 import { natsWrapper } from "../natswrapper";
+import { TradeOrderCreated } from "../events/publishers/trade-order-created-event";
+
+const EXPRIATION_WINDOW_SECOND = 10;
+
 
 export const sell = async (
   userID: string,
@@ -77,11 +81,19 @@ export const sell = async (
 
   // matchedData = { success: true, data: { status, ... }, message }
   if (matchedData.data.status === "QUEUED") {
+    const expiration = new Date();
+    expiration.setSeconds(expiration.getSeconds()+EXPRIATION_WINDOW_SECOND);
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
         status: "PENDING",
+        expiresAt:expiration
       },
+    });
+
+    new TradeOrderCreated(natsWrapper.client).publish({
+      orderId:update.id,
+      expiresAt:update.expiresAt!.toISOString()
     });
     return update;
   }
@@ -100,13 +112,21 @@ export const sell = async (
       throw new BadRequestError("problem in crediting money");
     }
 
+    const expiration = new Date();
+    expiration.setSeconds(expiration.getSeconds()+EXPRIATION_WINDOW_SECOND);
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
         status: "PENDING",
         resolved: creditAmount,
         matchedQuantity: matchedData.data.matchedQty,
+        expiresAt:expiration
       },
+    });
+
+    new TradeOrderCreated(natsWrapper.client).publish({
+      orderId:update.id,
+      expiresAt:update.expiresAt!.toISOString()
     });
 
     await new SellTradePublisher(natsWrapper.client).publish({

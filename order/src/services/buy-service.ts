@@ -3,6 +3,9 @@ import { prisma } from "../config/db";
 import axios from "axios";
 import { BuyTradePublisher } from "../events/publishers/buy-trade-event";
 import { natsWrapper } from "../natswrapper";
+import { TradeOrderCreated } from "../events/publishers/trade-order-created-event";
+
+const EXPRIATION_WINDOW_SECOND = 10;
 
 export const buy = async (
   userID: string,
@@ -96,6 +99,8 @@ export const buy = async (
     throw new BadRequestError("problem in matching engine");
   }
 
+  const expiration = new Date();
+  expiration.setSeconds( expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
   // matchedData = { success: true, data: { status, ... }, message }
   if (matchedData.data.status === "QUEUED") {
     const update = await prisma.order.update({
@@ -103,7 +108,14 @@ export const buy = async (
       data: {
         status: "PENDING",
         resolved: 0,
+        matchedQuantity:0,
+        expiresAt:expiration
       },
+    });
+
+    new TradeOrderCreated(natsWrapper.client).publish({
+      orderId:update.id,
+      expiresAt:update.expiresAt!.toISOString()
     });
     return update;
   }
@@ -130,22 +142,33 @@ export const buy = async (
       throw new BadRequestError("problem in settling money");
     }
 
+    const expiration = new Date();
+    expiration.setSeconds(expiration.getSeconds()+EXPRIATION_WINDOW_SECOND);
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
         status: "PENDING",
         resolved: settleAmount,
         matchedQuantity: matchedData.data.matchedQty,
+        expiresAt:expiration
       },
     });
 
-    await new BuyTradePublisher(natsWrapper.client).publish({
+    new TradeOrderCreated(natsWrapper.client).publish({
+      orderId:update.id,
+      expiresAt:update.expiresAt!.toISOString()
+    });
+
+
+     new BuyTradePublisher(natsWrapper.client).publish({
       userId: update.userId,
       symbol: update.symbol,
       price: update.price,
-      quantity: matchedData.data.matchedQty, // only matched portion
+      quantity: matchedData.data.matchedQty, 
       type: TradeType.Buy,
     });
+
+  
 
     return update;
   }
