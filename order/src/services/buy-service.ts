@@ -56,7 +56,7 @@ export const buy = async (
     data: {
       userId: userID,
       symbol: symbol,
-      quantity: quantity,
+      totalQuantity: quantity,
       status: "CREATED",
       type: "BUY",
       price: price!,
@@ -77,17 +77,22 @@ export const buy = async (
 
   if (!matchedStatus || matchedStatus !== 201) {
     const update = await prisma.order.update({
-      where:{
-        id:order.id
-      },data:{
-        status:"FAILED"
-      }
-    }); 
-    const {data:settle,status:settleStatus}= await callService("http://wallet-srv:3000/api/wallet/settle-money","patch",{
-      settleamount:0,
-      releaseamount:lockamount,
-      userID,
+      where: {
+        id: order.id,
+      },
+      data: {
+        status: "FAILED",
+      },
     });
+    const { data: settle, status: settleStatus } = await callService(
+      "http://wallet-srv:3000/api/wallet/settle-money",
+      "patch",
+      {
+        settleamount: 0,
+        releaseamount: lockamount,
+        userID,
+      },
+    );
     throw new BadRequestError("problem in matching engine");
   }
 
@@ -107,7 +112,8 @@ export const buy = async (
     const priceDiffSavings = matchedData.data.releaseAmount
       ? Number(matchedData.data.releaseAmount)
       : 0;
-    const settleAmount = Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
+    const settleAmount =
+      Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
 
     const { data: settleData, status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
@@ -129,6 +135,7 @@ export const buy = async (
       data: {
         status: "PENDING",
         resolved: settleAmount,
+        matchedQuantity: matchedData.data.matchedQty,
       },
     });
 
@@ -167,6 +174,7 @@ export const buy = async (
     data: {
       status: "SUCCESS",
       resolved: settleAmount,
+      matchedQuantity: matchedData.data.matchedQty,
     },
   });
 
@@ -174,7 +182,7 @@ export const buy = async (
     userId: final.userId,
     symbol: final.symbol,
     price: final.price,
-    quantity: final.quantity,
+    quantity: final.matchedQuantity,
     type: TradeType.Buy,
   });
 

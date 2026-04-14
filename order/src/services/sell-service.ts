@@ -37,8 +37,8 @@ export const sell = async (
     throw new BadRequestError("not able to verify stocks");
   }
   if (quantity > Number(holdings.data.quantity)) {
-  throw new BadRequestError("you do not own that much quantity");
-}
+    throw new BadRequestError("you do not own that much quantity");
+  }
 
   const order = await prisma.order.create({
     data: {
@@ -46,7 +46,7 @@ export const sell = async (
       symbol: symbol,
       type: "SELL",
       status: "CREATED",
-      quantity: quantity,
+      totalQuantity: quantity,
       price: price!,
     },
   });
@@ -65,12 +65,13 @@ export const sell = async (
 
   if (!matchedStatus || matchedStatus !== 201) {
     const update = await prisma.order.update({
-      where:{
-        id:order.id
-      },data:{
-        status:"FAILED"
-      }
-    })
+      where: {
+        id: order.id,
+      },
+      data: {
+        status: "FAILED",
+      },
+    });
     throw new BadRequestError("problem in matching engine");
   }
 
@@ -80,7 +81,6 @@ export const sell = async (
       where: { id: order.id },
       data: {
         status: "PENDING",
-        resolved: 0,
       },
     });
     return update;
@@ -102,7 +102,11 @@ export const sell = async (
 
     const update = await prisma.order.update({
       where: { id: order.id },
-      data: { status: "PENDING", resolved: creditAmount },
+      data: {
+        status: "PENDING",
+        resolved: creditAmount,
+        matchedQuantity: matchedData.data.matchedQty,
+      },
     });
 
     await new SellTradePublisher(natsWrapper.client).publish({
@@ -110,7 +114,7 @@ export const sell = async (
       symbol: update.symbol,
       price: update.price,
       type: TradeType.Sell,
-      quantity: matchedData.data.matchedQty, 
+      quantity: matchedData.data.matchedQty,
     });
 
     return update;
@@ -132,7 +136,11 @@ export const sell = async (
 
   const final = await prisma.order.update({
     where: { id: order.id },
-    data: { status: "SUCCESS", resolved: creditAmount },
+    data: {
+      status: "SUCCESS",
+      resolved: creditAmount,
+      matchedQuantity: matchedData.data.matchedQty,
+    },
   });
 
   await new SellTradePublisher(natsWrapper.client).publish({
@@ -140,7 +148,7 @@ export const sell = async (
     symbol: final.symbol,
     price: final.price,
     type: TradeType.Sell,
-    quantity: final.quantity,
+    quantity: final.matchedQuantity,
   });
 
   return final;

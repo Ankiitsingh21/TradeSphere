@@ -34,7 +34,8 @@ export const sell = async (
           orderId,
           userId,
           symbol,
-          quantity: remainingQty,
+          totalQuantity: remainingQty,
+          matchedQuantity:remainingQty,
           price: book.marketPrice,
           type: TradeType.Sell,
           status: TradeStatus.MATCHED,
@@ -80,7 +81,7 @@ export const sell = async (
       // Exact match — buyer fully consumed
       await prisma.orderBook.update({
         where: { id: buyer.id },
-        data: { status: TradeStatus.MATCHED },
+        data: { status: TradeStatus.MATCHED ,matchedQuantity:remainingQty},
       });
       book.buyHeap.dequeue();
 
@@ -103,7 +104,7 @@ export const sell = async (
       // Buyer fully consumed, seller still has remaining
       await prisma.orderBook.update({
         where: { id: buyer.id },
-        data: { status: TradeStatus.MATCHED },
+        data: { status: TradeStatus.MATCHED ,matchedQuantity:buyer.quantity},
       });
       book.buyHeap.dequeue();
 
@@ -128,7 +129,7 @@ export const sell = async (
 
       await prisma.orderBook.update({
         where: { id: buyer.id },
-        data: { quantity: remaining },
+        data: { matchedQuantity:remainingQty  },
       });
       book.buyHeap.dequeue();
 
@@ -149,7 +150,8 @@ export const sell = async (
         orderId,
         userId,
         symbol,
-        quantity: totalMatchedQty,
+        totalQuantity: quantity,
+        matchedQuantity: totalMatchedQty,
         price: lastTradePrice,
         type: TradeType.Sell,
         status: TradeStatus.MATCHED,

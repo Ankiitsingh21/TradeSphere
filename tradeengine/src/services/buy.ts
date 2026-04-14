@@ -30,7 +30,8 @@ export const buy = async (
           orderId,
           userId,
           symbol,
-          quantity: remainingQty,
+          totalQuantity: remainingQty,
+          matchedQuantity:remainingQty,
           price: book.marketPrice,
           type: TradeType.Buy,
           status: TradeStatus.MATCHED,
@@ -77,7 +78,7 @@ export const buy = async (
     if (remainingQty.equals(seller.quantity)) {
       await prisma.orderBook.update({
         where: { id: seller.id },
-        data: { status: TradeStatus.MATCHED },
+        data: { status: TradeStatus.MATCHED ,matchedQuantity:remainingQty},
       });
 
       book.sellHeap.dequeue();
@@ -98,7 +99,7 @@ export const buy = async (
     } else if (remainingQty.greaterThan(seller.quantity)) {
       await prisma.orderBook.update({
         where: { id: seller.id },
-        data: { status: TradeStatus.MATCHED },
+        data: { status: TradeStatus.MATCHED ,matchedQuantity:seller.quantity },
       });
 
       book.sellHeap.dequeue();
@@ -122,7 +123,7 @@ export const buy = async (
 
       await prisma.orderBook.update({
         where: { id: seller.id },
-        data: { quantity: remaining },
+        data: { matchedQuantity:remainingQty},
       });
 
       book.sellHeap.dequeue();
@@ -146,7 +147,8 @@ export const buy = async (
         orderId,
         userId,
         symbol,
-        quantity: totalMatchedQty,
+        totalQuantity: quantity,
+        matchedQuantity: totalMatchedQty,
         price: lastTradePrice,
         type: TradeType.Buy,
         status: TradeStatus.MATCHED,

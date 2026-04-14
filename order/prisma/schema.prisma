@@ -14,9 +14,11 @@ datasource db {
 
 enum OrderStatus {
   CREATED
+  PENDING
   SUCCESS
   FAILED
-  PENDING
+  EXPIRED
+  PARTIAL_EXPIRED
 }
 
 enum OrderType{
@@ -24,15 +26,18 @@ enum OrderType{
   SELL
 }
 
-model order {
-  id         String      @id @default(uuid())
-  userId     String
-  symbol     String
-  type       OrderType
-  status     OrderStatus
-  quantity   Decimal
-  resolved   Decimal?
-  price      Decimal
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+model Order {
+  id               String      @id @default(uuid())
+  userId           String
+  symbol           String
+  type             OrderType
+  status           OrderStatus
+  totalQuantity    Decimal
+  matchedQuantity  Decimal?
+  price            Decimal
+  resolved         Decimal     @default(0)  
+  expiresAt        DateTime?               
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 }
+

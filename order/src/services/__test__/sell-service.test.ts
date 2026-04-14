@@ -15,7 +15,11 @@ const mockedAxios = axios as jest.MockedFunction<typeof axios>;
 import { sell } from "../../services/sell-service";
 import { BadRequestError } from "@showsphere/common";
 
-import { Prisma, OrderType, OrderStatus } from "../../../src/generated/prisma/client";
+import {
+  Prisma,
+  OrderType,
+  OrderStatus,
+} from "../../../src/generated/prisma/client";
 
 const mockOrder = {
   id: "order-1",
@@ -102,7 +106,9 @@ describe("sell service", () => {
       status: 400,
     });
 
-    await expect(sell("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(BadRequestError);
+    await expect(sell("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(
+      BadRequestError,
+    );
     expect(prismaMock.order.create).not.toHaveBeenCalled();
   });
 
@@ -115,7 +121,9 @@ describe("sell service", () => {
       status: 201,
     });
 
-    await expect(sell("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(BadRequestError);
+    await expect(sell("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(
+      BadRequestError,
+    );
     expect(prismaMock.order.create).not.toHaveBeenCalled();
   });
 
@@ -137,12 +145,14 @@ describe("sell service", () => {
       status: OrderStatus.FAILED,
     });
 
-    await expect(sell("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(BadRequestError);
+    await expect(sell("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(
+      BadRequestError,
+    );
 
     expect(prismaMock.order.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: { status: OrderStatus.FAILED },
-      })
+      }),
     );
   });
 
@@ -152,7 +162,9 @@ describe("sell service", () => {
       status: 500,
     });
 
-    await expect(sell("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(BadRequestError);
+    await expect(sell("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(
+      BadRequestError,
+    );
     expect(prismaMock.order.create).not.toHaveBeenCalled();
   });
 });

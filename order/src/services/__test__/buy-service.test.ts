@@ -71,7 +71,10 @@ describe("buy service", () => {
     });
 
     it("should handle BUY QUEUED — order stays PENDING", async () => {
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.create.mockResolvedValue(mockOrder);
 
       mockedAxios.mockResolvedValueOnce({
@@ -89,7 +92,10 @@ describe("buy service", () => {
     });
 
     it("should handle BUY PARTIAL — only matched qty settled", async () => {
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.create.mockResolvedValue(mockOrder);
 
       mockedAxios.mockResolvedValueOnce({
@@ -105,7 +111,10 @@ describe("buy service", () => {
         status: 201,
       });
 
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
 
       prismaMock.order.update.mockResolvedValue({
         ...mockOrder,
@@ -117,22 +126,30 @@ describe("buy service", () => {
     });
 
     it("should unlock money and set FAILED if matching engine fails", async () => {
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.create.mockResolvedValue(mockOrder);
 
       mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
 
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
 
       prismaMock.order.update.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.FAILED,
       });
 
-      await expect(buy("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(BadRequestError);
+      await expect(buy("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(
+        BadRequestError,
+      );
 
       expect(prismaMock.order.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: OrderStatus.FAILED } })
+        expect.objectContaining({ data: { status: OrderStatus.FAILED } }),
       );
     });
 
@@ -142,7 +159,9 @@ describe("buy service", () => {
         status: 400,
       });
 
-      await expect(buy("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(BadRequestError);
+      await expect(buy("user-1", "RELIANCE", 5, 2000)).rejects.toThrow(
+        BadRequestError,
+      );
 
       expect(prismaMock.order.create).not.toHaveBeenCalled();
     });
@@ -155,7 +174,10 @@ describe("buy service", () => {
         status: 201,
       });
 
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.create.mockResolvedValue(mockOrder);
 
       mockedAxios.mockResolvedValueOnce({
@@ -171,7 +193,10 @@ describe("buy service", () => {
         status: 201,
       });
 
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
 
       prismaMock.order.update.mockResolvedValue({
         ...mockOrder,
@@ -185,7 +210,9 @@ describe("buy service", () => {
     it("should throw if stock service is down", async () => {
       mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
 
-      await expect(buy("user-1", "RELIANCE", 5)).rejects.toThrow(BadRequestError);
+      await expect(buy("user-1", "RELIANCE", 5)).rejects.toThrow(
+        BadRequestError,
+      );
 
       expect(prismaMock.order.create).not.toHaveBeenCalled();
     });

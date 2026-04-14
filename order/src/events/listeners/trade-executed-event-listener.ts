@@ -1,9 +1,7 @@
 import {
   Listener,
   Subjects,
-  
   TradeExecutedEvent,
-  
   TradeType,
 } from "@showsphere/common";
 import { Message } from "node-nats-streaming";
@@ -50,7 +48,10 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
     }
   }
 
-  private async handleBuySettlement(order: any, data: TradeExecutedEvent["data"]) {
+  private async handleBuySettlement(
+    order: any,
+    data: TradeExecutedEvent["data"],
+  ) {
     const lockamount = Number(order.price) * Number(order.quantity);
     const releaseAmount = data.releaseAmount ? Number(data.releaseAmount) : 0;
     const settleAmount = lockamount - releaseAmount;
