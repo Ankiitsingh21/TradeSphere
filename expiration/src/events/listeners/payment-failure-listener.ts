@@ -1,7 +1,7 @@
 import { Listener, PaymentFailureEvent, Subjects } from "@showsphere/common";
 import { queuegroupname } from "./queue-group-name";
 import { Message } from "node-nats-streaming";
-import {expirationQueuee} from "../../queues/expiration-queue";
+import { expirationQueuee } from "../../queues/expiration-queue";
 
 export class PaymentFailureListener extends Listener<PaymentFailureEvent> {
   subject: Subjects.PaymentFailure = Subjects.PaymentFailure;

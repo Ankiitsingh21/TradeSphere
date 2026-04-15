@@ -1,6 +1,8 @@
 import { app } from "./app";
 import { connectDB } from "./config/db";
 import { OrderCancelledListener } from "./events/listeners/order-cancelled-listener";
+import { PaymentFailureExpirationCompleteListener } from "./events/listeners/payment-failure-expireation-complete-listener";
+import { SellPaymentFailureExpirationcompleteListener } from "./events/listeners/sell-payment-failure-expiration-listener";
 import { TradeExecutedListener } from "./events/listeners/trade-executed-event-listener";
 import { natsWrapper } from "./natswrapper";
 
@@ -40,6 +42,10 @@ const start = async () => {
 
     new TradeExecutedListener(natsWrapper.client).listen();
     new OrderCancelledListener(natsWrapper.client).listen();
+    new PaymentFailureExpirationCompleteListener(natsWrapper.client).listen();
+    new SellPaymentFailureExpirationcompleteListener(
+      natsWrapper.client,
+    ).listen();
   } catch (error) {
     console.error("NATS connection failed, exiting", error);
     process.exit(1);

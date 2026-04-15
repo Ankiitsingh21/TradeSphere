@@ -11,6 +11,10 @@ import { BuyTradePublisher } from "../publishers/buy-trade-event";
 import { SellTradePublisher } from "../publishers/sell-trade-event";
 import { natsWrapper } from "../../natswrapper";
 import { queueGroupName } from "../queueGroupName";
+import { PaymentFailurePublisher } from "../publishers/payment-failure-publisher";
+import { SellPaymentFailurePublisher } from "../publishers/sellPaymentFailurePublisher";
+
+const EXPRIATION_WINDOW_SECOND = 10;
 
 export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
   subject: Subjects.TradeExecuted = Subjects.TradeExecuted;
@@ -55,7 +59,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
     const releaseAmount = data.releaseAmount ? Number(data.releaseAmount) : 0;
     const settleAmount = lockamount - releaseAmount;
 
-    await callService(
+    const { status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
       "patch",
       {
@@ -65,9 +69,45 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
       },
     );
 
+    const expiration = new Date();
+    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+
+    if (!settleStatus || settleStatus !== 201) {
+      const cnt = 1;
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: "PAYMENT_FAILURE",
+          resolved: settleAmount,
+          matchedQuantity: data.matchedQty,
+          expiresAt: expiration,
+        },
+      });
+
+      await new PaymentFailurePublisher(natsWrapper.client).publish({
+        orderId: order.id,
+        expiresAt: expiration.toISOString(),
+        matchedQuantity: data.matchedQty,
+        resolved: settleAmount,
+        settleamount: settleAmount,
+        releaseamount: releaseAmount,
+        status: "PAYMENT_FAILURE",
+        userId: order.userId,
+        cnt,
+      });
+
+      return;
+    }
+
+    // SUCCESS
     const updated = await prisma.order.update({
       where: { id: order.id },
-      data: { status: "SUCCESS", resolved: settleAmount },
+      data: {
+        status: "SUCCESS",
+        resolved: settleAmount,
+        matchedQuantity: data.matchedQty,
+      },
     });
 
     await new BuyTradePublisher(natsWrapper.client).publish({
@@ -82,7 +122,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
   private async handleSellCredit(order: any, data: TradeExecutedEvent["data"]) {
     const creditAmount = Number(data.tradePrice) * Number(data.matchedQty);
 
-    await callService(
+    const { status: creditStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
       {
@@ -91,9 +131,42 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
       },
     );
 
+    const expiration = new Date();
+    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+
+    if (!creditStatus || creditStatus !== 201) {
+      const cnt = 1;
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: "PAYMENT_FAILURE",
+          resolved: creditAmount,
+          matchedQuantity: data.matchedQty,
+          expiresAt: expiration,
+        },
+      });
+
+      await new SellPaymentFailurePublisher(natsWrapper.client).publish({
+        orderId: order.id,
+        expiresAt: expiration.toISOString(),
+        amount: creditAmount,
+        userId: order.userId,
+        status: "PAYMENT_FAILURE",
+        cnt,
+      });
+
+      return;
+    }
+
+    // SUCCESS
     const updated = await prisma.order.update({
       where: { id: order.id },
-      data: { status: "SUCCESS", resolved: creditAmount },
+      data: {
+        status: "SUCCESS",
+        resolved: creditAmount,
+        matchedQuantity: data.matchedQty,
+      },
     });
 
     await new SellTradePublisher(natsWrapper.client).publish({
@@ -107,9 +180,13 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
 }
 
 const callService = async (url: string, method: string, payload: any) => {
-  const response = await axios({ method, url, data: payload });
-  if (response.status !== 201) {
-    throw new Error(`${url} returned ${response.status}`);
+  try {
+    const response = await axios({ method, url, data: payload });
+    return { data: response.data, status: response.status };
+  } catch (error: any) {
+    return {
+      data: error.response?.data,
+      status: error.response?.status,
+    };
   }
-  return response.data;
 };

@@ -4,6 +4,7 @@ import { BadRequestError, TradeType } from "@showsphere/common";
 import { SellTradePublisher } from "../events/publishers/sell-trade-event";
 import { natsWrapper } from "../natswrapper";
 import { TradeOrderCreated } from "../events/publishers/trade-order-created-event";
+import { SellPaymentFailurePublisher } from "../events/publishers/sellPaymentFailurePublisher";
 
 const EXPRIATION_WINDOW_SECOND = 10;
 
@@ -98,6 +99,22 @@ export const sell = async (
     const creditAmount =
       Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
 
+    const expiration = new Date();
+    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+
+    new TradeOrderCreated(natsWrapper.client).publish({
+      orderId: order.id,
+      expiresAt: expiration!.toISOString(),
+    });
+
+    await new SellTradePublisher(natsWrapper.client).publish({
+      userId: order.userId,
+      symbol: symbol,
+      price: matchedData.data.tradePrice,
+      type: TradeType.Sell,
+      quantity: matchedData.data.matchedQty,
+    });
+
     const { status: creditStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
@@ -105,33 +122,42 @@ export const sell = async (
     );
 
     if (!creditStatus || creditStatus !== 201) {
-      throw new BadRequestError("problem in crediting money");
-    }
+      const expiration = new Date();
+      expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+      const cnt = 1;
 
-    const expiration = new Date();
-    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+      const update = await prisma.order.update({
+        where: {
+          id: order.id,
+        },
+        data: {
+          status: "PARTIAL_FILLED_PAYMENT_FAILURE",
+          resolved: creditAmount,
+          matchedQuantity: matchedData.data.matchedQty,
+          expiresAt: expiration,
+        },
+      });
+
+      await new SellPaymentFailurePublisher(natsWrapper.client).publish({
+        orderId: order.id,
+        expiresAt: expiration!.toISOString(),
+        amount: creditAmount,
+        cnt: cnt,
+        userId: update.userId,
+        status: update.status,
+      });
+
+      return update;
+    }
 
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
-        status: "PENDING",
+        status: "PARTIAL_FILLED",
         resolved: creditAmount,
         matchedQuantity: matchedData.data.matchedQty,
         expiresAt: expiration,
       },
-    });
-
-    new TradeOrderCreated(natsWrapper.client).publish({
-      orderId: update.id,
-      expiresAt: update.expiresAt!.toISOString(),
-    });
-
-    await new SellTradePublisher(natsWrapper.client).publish({
-      userId: update.userId,
-      symbol: update.symbol,
-      price: matchedData.data.tradePrice,
-      type: TradeType.Sell,
-      quantity: matchedData.data.matchedQty,
     });
 
     return update;
@@ -141,14 +167,47 @@ export const sell = async (
   const creditAmount =
     Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
 
+  await new SellTradePublisher(natsWrapper.client).publish({
+    userId: order.userId,
+    symbol: order.symbol,
+    price: matchedData.data.tradePrice,
+    type: TradeType.Sell,
+    quantity: matchedData.data.matchedQty,
+  });
+
   const { status: creditStatus } = await callService(
-    "http://wallet-srv:3000/api/wallet/credit-money",
+    "http://wallet-srv:3000/api/wallet/credit-moneyy",
     "patch",
     { userID, amount: creditAmount },
   );
 
   if (!creditStatus || creditStatus !== 201) {
-    throw new BadRequestError("problem in crediting money");
+    const expiration = new Date();
+    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+    const cnt = 1;
+
+    const update = await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        status: "PAYMENT_FAILURE",
+        resolved: creditAmount,
+        matchedQuantity: matchedData.data.matchedQty,
+        expiresAt: expiration,
+      },
+    });
+
+    await new SellPaymentFailurePublisher(natsWrapper.client).publish({
+      orderId: order.id,
+      expiresAt: expiration!.toISOString(),
+      amount: creditAmount,
+      cnt: cnt,
+      userId: update.userId,
+      status: update.status,
+    });
+
+    return update;
   }
 
   const final = await prisma.order.update({
@@ -160,14 +219,6 @@ export const sell = async (
     },
   });
 
-  await new SellTradePublisher(natsWrapper.client).publish({
-    userId: final.userId,
-    symbol: final.symbol,
-    price: matchedData.data.tradePrice,
-    type: TradeType.Sell,
-    quantity: final.matchedQuantity,
-  });
-
   return final;
 };
 
@@ -176,8 +227,8 @@ const callService = async (url: string, method: string, payload: any) => {
     const response = await axios({ method, url, data: payload });
     return { data: response.data, status: response.status };
   } catch (error: any) {
-    console.log(url);
-    console.log(error.response?.data);
+    // console.log(url);
+    // console.log(error.response?.data);
     return {
       data: error.response?.data,
       status: error.response?.status,

@@ -14,6 +14,7 @@ export class BuyTradeListener extends Listener<BuyTradeEvent> {
   queueGroupName: string = queueGroupName;
   async onMessage(data: BuyTradeEvent["data"], msg: Message) {
     try {
+      // console.log(data);
       await buy(data.userId, data.symbol, data.price, data.quantity);
 
       msg.ack();

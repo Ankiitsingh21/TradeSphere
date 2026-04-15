@@ -1,23 +1,26 @@
 import {
   Listener,
-  PaymentFailureExpirationCompleteEvent,
+  SellPaymentFailureExpirationEventcomplete,
   Subjects,
 } from "@showsphere/common";
 import { queueGroupName } from "../queueGroupName";
 import { Message } from "node-nats-streaming";
 import { prisma } from "../../config/db";
 import axios from "axios";
-import { PaymentFailurePublisher } from "../publishers/payment-failure-publisher";
+import { SellPaymentFailurePublisher } from "../publishers/sellPaymentFailurePublisher";
 import { natsWrapper } from "../../natswrapper";
+import { OrderStatus } from "../../generated/prisma/enums";
 
 const EXPRIATION_WINDOW_SECOND = 10;
 
-export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFailureExpirationCompleteEvent> {
-  subject: Subjects.PaymentFailureExpirationComplete =
-    Subjects.PaymentFailureExpirationComplete;
+export class SellPaymentFailureExpirationcompleteListener extends Listener<SellPaymentFailureExpirationEventcomplete> {
+  subject: Subjects.SellPaymentFailureComplete =
+    Subjects.SellPaymentFailureComplete;
+
   queueGroupName: string = queueGroupName;
+
   async onMessage(
-    data: PaymentFailureExpirationCompleteEvent["data"],
+    data: SellPaymentFailureExpirationEventcomplete["data"],
     msg: Message,
   ) {
     const order = await prisma.order.findUnique({
@@ -27,46 +30,45 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
     });
 
     if (!order) {
-      console.log("critical error alert order not found of payment failure");
+      console.log(
+        "critical error alert order not found of SELL payment failure",
+      );
       msg.ack();
       return;
     }
 
     if (data.cnt > 3) {
       for (let i = 0; i < 5; i++) {
-        console.log(
-          "critical error alert please watch this situation gracefully",
-        );
+        console.log("SELL payment retry exhausted");
         console.log(data);
       }
       msg.ack();
       return;
     }
 
-    // if(data.status==="PARTIAL_FILLED_PAYMENT_FAILURE"){
-
-    const { data: settleData, status: settleStatus } = await callService(
-      "http://wallet-srv:3000/api/wallet/settle-money",
+    // retry credit
+    const { status: creditStatus } = await callService(
+      "http://wallet-srv:3000/api/wallet/credit-moneyy",
       "patch",
       {
-        settleamount: data.settleamount,
-        releaseamount: data.releaseamount,
+        amount: data.amount,
         userID: data.userId,
       },
     );
 
-    if (!settleStatus || settleStatus !== 201) {
+    if (!creditStatus || creditStatus !== 201) {
       const cnt = data.cnt + 1;
+
       const expiration = new Date();
       expiration.setSeconds(
         expiration.getSeconds() + EXPRIATION_WINDOW_SECOND * cnt,
       );
-      //       const cnt=1;
 
+      // map string → enum safely
       const finalstatus =
-        data.matchedQuantity < Number(order.totalQuantity)
-          ? "PARTIAL_FILLED_PAYMENT_FAILURE"
-          : "PAYMENT_FAILURE";
+        data.status === "PARTIAL_FILLED_PAYMENT_FAILURE"
+          ? OrderStatus.PARTIAL_FILLED_PAYMENT_FAILURE
+          : OrderStatus.PAYMENT_FAILURE;
 
       await prisma.order.update({
         where: {
@@ -77,34 +79,31 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
           status: finalstatus,
         },
       });
-      await new PaymentFailurePublisher(natsWrapper.client).publish({
+
+      await new SellPaymentFailurePublisher(natsWrapper.client).publish({
         orderId: order.id,
-        expiresAt: expiration!.toISOString(),
-        matchedQuantity: data.matchedQuantity,
-        resolved: data.settleamount,
-        settleamount: data.settleamount,
-        releaseamount: data.releaseamount,
-        status: finalstatus,
+        expiresAt: expiration.toISOString(),
+        amount: data.amount,
         userId: order.userId,
+        status: finalstatus, // still enum → OK if shared type supports
         cnt: cnt,
       });
 
       msg.ack();
       return;
-      // }
     }
 
+    // SUCCESS
     const finalStatus =
-      Number(data.matchedQuantity) === Number(order.totalQuantity)
-        ? "SUCCESS"
-        : "PARTIAL_FILLED";
+      data.status === "PARTIAL_FILLED_PAYMENT_FAILURE"
+        ? OrderStatus.PARTIAL_FILLED
+        : OrderStatus.SUCCESS;
 
     await prisma.order.update({
       where: { id: order.id },
       data: {
         status: finalStatus,
-        resolved: data.settleamount,
-        matchedQuantity: data.matchedQuantity,
+        resolved: data.amount,
       },
     });
 

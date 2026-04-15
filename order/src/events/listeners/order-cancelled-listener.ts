@@ -45,7 +45,7 @@ export class OrderCancelledListener extends Listener<TradeOrderCancelledEvent> {
         userID: order.userId,
       },
     );
-//     console.log(settleData)
+    //     console.log(settleData)
 
     if (!settleStatus || settleStatus !== 201) {
       console.log("problem in settling money");
@@ -53,7 +53,7 @@ export class OrderCancelledListener extends Listener<TradeOrderCancelledEvent> {
       return;
     }
 
-//     console.log(data);
+    //     console.log(data);
     msg.ack();
   }
 }

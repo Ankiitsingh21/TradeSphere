@@ -1,3 +1,5 @@
+import { PaymentFailureListener } from "./events/listeners/payment-failure-listener";
+import { SellPaymentFailureListener } from "./events/listeners/sell-payment-failure-listener";
 import { TradeOrderCreatedListener } from "./events/listeners/TradeOrderCreated-listener";
 import { natsWrapper } from "./natswrapper";
 
@@ -27,6 +29,8 @@ const start = async () => {
     process.on("SIGTERM", () => natsWrapper.client.close());
 
     new TradeOrderCreatedListener(natsWrapper.client).listen();
+    new PaymentFailureListener(natsWrapper.client).listen();
+    new SellPaymentFailureListener(natsWrapper.client).listen();
   } catch (err) {
     // throw new DatabaseConnectionError()
     return;
