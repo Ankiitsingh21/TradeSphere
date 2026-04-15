@@ -4,6 +4,7 @@ import axios from "axios";
 import { BuyTradePublisher } from "../events/publishers/buy-trade-event";
 import { natsWrapper } from "../natswrapper";
 import { TradeOrderCreated } from "../events/publishers/trade-order-created-event";
+import { PaymentFailurePublisher } from "../events/publishers/payment-failure-publisher";
 
 const EXPRIATION_WINDOW_SECOND = 10;
 
@@ -122,7 +123,25 @@ export const buy = async (
     const settleAmount =
       Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
 
-    const { data: settleData, status: settleStatus } = await callService(
+    const expiration = new Date();
+    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+
+    await new TradeOrderCreated(natsWrapper.client).publish({
+      orderId:  order.id,
+      expiresAt: expiration!.toISOString(),
+    });
+
+    new BuyTradePublisher(natsWrapper.client).publish({
+      userId: matchedData.data.userId,
+      symbol: matchedData.data.symbol,
+      price: matchedData.data.tradePrice,
+      quantity: matchedData.data.matchedQty,
+      type: TradeType.Buy,
+    });
+
+
+
+     const { data: settleData, status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
       "patch",
       {
@@ -133,33 +152,43 @@ export const buy = async (
     );
 
     if (!settleStatus || settleStatus !== 201) {
-      throw new BadRequestError("problem in settling money");
-    }
+      const expiration = new Date();
+      expiration.setSeconds(expiration.getSeconds()+EXPRIATION_WINDOW_SECOND);
+      const cnt=1;
 
-    const expiration = new Date();
-    expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
+      const update = await prisma.order.update({
+        where:{
+          id:order.id
+        },data:{
+          resolved: settleAmount,
+        matchedQuantity: matchedData.data.matchedQty,
+        expiresAt: expiration,
+        status:"PARTIAL_FILLED_PAYMENT_FAILURE"
+        }
+      });
+      await new PaymentFailurePublisher(natsWrapper.client).publish({
+        orderId:order.id,
+        expiresAt:expiration!.toISOString(),
+        matchedQuantity:matchedData.data.matchedQty,
+        resolved:settleAmount,
+        settleamount:settleAmount,
+        releaseamount:priceDiffSavings,
+        status:"PARTIAL_FILLED_PAYMENT_FAILURE",
+        userId:order.userId,
+        cnt:cnt
+      });
+      
+      return update;
+    }
 
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
-        status: "PENDING",
+        status: "PARTIAL_FILLED",
         resolved: settleAmount,
         matchedQuantity: matchedData.data.matchedQty,
         expiresAt: expiration,
       },
-    });
-
-    await new TradeOrderCreated(natsWrapper.client).publish({
-      orderId: update.id,
-      expiresAt: update.expiresAt!.toISOString(),
-    });
-
-    new BuyTradePublisher(natsWrapper.client).publish({
-      userId: update.userId,
-      symbol: update.symbol,
-      price: matchedData.data.tradePrice,
-      quantity: matchedData.data.matchedQty,
-      type: TradeType.Buy,
     });
 
     return update;
@@ -170,6 +199,15 @@ export const buy = async (
     ? Number(matchedData.data.releaseAmount)
     : 0;
   const settleAmount = lockamount - releaseAmount;
+
+
+  await new BuyTradePublisher(natsWrapper.client).publish({
+    userId: matchedData.data.userId,
+    symbol: symbol,
+    price: matchedData.data.tradePrice,
+    quantity: matchedData.data.matchedQuantity,
+    type: TradeType.Buy,
+  });
 
   const { data: settleData, status: settleStatus } = await callService(
     "http://wallet-srv:3000/api/wallet/settle-money",
@@ -182,7 +220,36 @@ export const buy = async (
   );
 
   if (!settleStatus || settleStatus !== 201) {
-    throw new BadRequestError("problem in settling money");
+
+    const expiration = new Date();
+      expiration.setSeconds(expiration.getSeconds()+EXPRIATION_WINDOW_SECOND);
+      const cnt=1;
+
+    const fail= await prisma.order.update({
+      where:{
+        id:order.id
+      },data:{
+        status:"PAYMENT_FAILURE",
+        resolved: settleAmount,
+      matchedQuantity: matchedData.data.matchedQty,
+      expiresAt:expiration
+      }
+    });
+
+    await new PaymentFailurePublisher(natsWrapper.client).publish({
+        orderId:order.id,
+        expiresAt:expiration!.toISOString(),
+        matchedQuantity:matchedData.data.matchedQty,
+        resolved:settleAmount,
+        settleamount:settleAmount,
+        releaseamount:releaseAmount,
+        status:"PAYMENT_FAILURE",
+        userId:order.userId,
+        cnt:cnt
+      });
+
+
+    return fail;
   }
 
   const final = await prisma.order.update({
@@ -192,14 +259,6 @@ export const buy = async (
       resolved: settleAmount,
       matchedQuantity: matchedData.data.matchedQty,
     },
-  });
-
-  await new BuyTradePublisher(natsWrapper.client).publish({
-    userId: final.userId,
-    symbol: final.symbol,
-    price: matchedData.data.tradePrice,
-    quantity: final.matchedQuantity,
-    type: TradeType.Buy,
   });
 
   return final;
