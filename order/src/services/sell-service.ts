@@ -176,7 +176,7 @@ export const sell = async (
   });
 
   const { status: creditStatus } = await callService(
-    "http://wallet-srv:3000/api/wallet/credit-moneyy",
+    "http://wallet-srv:3000/api/wallet/credit-money",
     "patch",
     { userID, amount: creditAmount },
   );

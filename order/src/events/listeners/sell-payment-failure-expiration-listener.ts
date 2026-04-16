@@ -48,7 +48,7 @@ export class SellPaymentFailureExpirationcompleteListener extends Listener<SellP
 
     // retry credit
     const { status: creditStatus } = await callService(
-      "http://wallet-srv:3000/api/wallet/credit-moneyy",
+      "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
       {
         amount: data.amount,
