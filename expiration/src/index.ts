@@ -32,8 +32,9 @@ const start = async () => {
     new PaymentFailureListener(natsWrapper.client).listen();
     new SellPaymentFailureListener(natsWrapper.client).listen();
   } catch (err) {
-    // throw new DatabaseConnectionError()
-    return;
+    // Fix: was silently returning — queues initialize but can never publish
+    console.error("NATS connection failed, exiting", err);
+    process.exit(1);
   }
 };
 

@@ -86,7 +86,7 @@ describe("lockMoney service", () => {
 
     const result = await lockmoney("user-1", 1000);
 
-    expect(result.update.available_balance).toBe(0);
-    expect(result.update.locked_balance).toBe(1000);
+    expect(result.update!.available_balance).toBe(0);
+    expect(result.update!.locked_balance).toBe(1000);
   });
 });

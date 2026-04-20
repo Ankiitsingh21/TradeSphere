@@ -17,7 +17,7 @@ export const createwallet = async (userId: string) => {
     // console.log("wallet craeted ");
     return user;
   } catch (error) {
-    console.log(error);
+    // console.log(error);
     throw new BadRequestError(
       "Not able to create a new wallet  at service layer",
     );

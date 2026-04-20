@@ -23,15 +23,20 @@ describe("creditMoney service", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("should credit money and create CREDIT transaction", async () => {
-    prismaMock.wallet.findUnique.mockResolvedValue(mockWallet);
     prismaMock.$transaction.mockImplementation(async (fn: any) =>
       fn(prismaMock),
     );
-    prismaMock.wallet.update.mockResolvedValue({
-      ...mockWallet,
-      available_balance: 5000 as any,
-      total_balance: 5000 as any,
-    });
+    // First findUnique inside tx = read; second = post-updateMany fetch
+    prismaMock.wallet.findUnique
+      .mockResolvedValueOnce(mockWallet)
+      .mockResolvedValueOnce({
+        ...mockWallet,
+        available_balance: 5000 as any,
+        total_balance: 5000 as any,
+      });
+
+    prismaMock.wallet.updateMany.mockResolvedValue({ count: 1 });
+
     prismaMock.transactions.create.mockResolvedValue({
       id: "txn-1",
       type: "CREDIT",
@@ -44,6 +49,9 @@ describe("creditMoney service", () => {
   });
 
   it("should throw if wallet not found", async () => {
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock),
+    );
     prismaMock.wallet.findUnique.mockResolvedValue(null);
 
     await expect(credit("user-1", 5000)).rejects.toThrow(BadRequestError);

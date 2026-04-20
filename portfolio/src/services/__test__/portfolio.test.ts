@@ -1,5 +1,3 @@
-// tests/services/portfolio.test.ts
-
 import { prismaMock } from "../../__mocks__/prisma";
 
 jest.mock("../../config/db", () => {
@@ -29,7 +27,7 @@ describe("Portfolio buy service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock)
+      fn(prismaMock),
     );
   });
 
@@ -39,31 +37,39 @@ describe("Portfolio buy service", () => {
 
     await buy("user-1", "TATA", 2000, 5);
 
-    expect(prismaMock.portfolio.create).toHaveBeenCalled();
+    expect(prismaMock.portfolio.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ userId: "user-1", symbol: "TATA" }),
+      }),
+    );
   });
 
-  it("should update existing portfolio with correct avg price when buying more", async () => {
-    const existing = { ...mockPortfolio };
-
+  it("should update existing portfolio with OCC version check when buying more", async () => {
     prismaMock.portfolio.findUnique
-      .mockResolvedValueOnce(existing) // read
+      .mockResolvedValueOnce(mockPortfolio) // initial read
       .mockResolvedValueOnce({
-        ...existing,
+        ...mockPortfolio,
         quantity: new Prisma.Decimal(15),
         avgBuyPrice: new Prisma.Decimal(1983),
+        version: 1,
       }); // post-update fetch
 
     prismaMock.portfolio.updateMany.mockResolvedValue({ count: 1 });
 
     await buy("user-1", "TATA", 1950, 5);
 
-    expect(prismaMock.portfolio.updateMany).toHaveBeenCalled();
+    expect(prismaMock.portfolio.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ version: 0 }),
+      }),
+    );
   });
 
   it("should throw if quantity is 0 or negative", async () => {
     await expect(buy("user-1", "TATA", 2000, 0)).rejects.toThrow(
-      BadRequestError
+      BadRequestError,
     );
+    expect(prismaMock.portfolio.create).not.toHaveBeenCalled();
   });
 });
 
@@ -71,60 +77,65 @@ describe("Portfolio sell service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock)
+      fn(prismaMock),
     );
   });
 
   it("should reduce quantity on partial sell", async () => {
-    const existing = { ...mockPortfolio };
-
     prismaMock.portfolio.findUnique
-      .mockResolvedValueOnce(existing)
+      .mockResolvedValueOnce(mockPortfolio)
       .mockResolvedValueOnce({
-        ...existing,
+        ...mockPortfolio,
         quantity: new Prisma.Decimal(8),
+        version: 1,
       });
 
     prismaMock.portfolio.updateMany.mockResolvedValue({ count: 1 });
 
     await sell("user-1", "TATA", 2000, 2);
 
-    expect(prismaMock.portfolio.updateMany).toHaveBeenCalled();
+    expect(prismaMock.portfolio.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ version: 0 }),
+        data: expect.objectContaining({ version: { increment: 1 } }),
+      }),
+    );
   });
 
-  it("should delete portfolio entry when all shares sold", async () => {
-    const existing = {
-      ...mockPortfolio,
-      quantity: new Prisma.Decimal(5),
-    };
+  it("should delete portfolio entry using deleteMany (OCC) when all shares sold", async () => {
+    const existing = { ...mockPortfolio, quantity: new Prisma.Decimal(5) };
 
-    prismaMock.portfolio.findUnique.mockResolvedValue(existing);
-    prismaMock.portfolio.delete.mockResolvedValue(existing);
+    prismaMock.portfolio.findUnique.mockResolvedValueOnce(existing);
+    // deleteMany returns count, not the record
+    prismaMock.portfolio.deleteMany.mockResolvedValue({ count: 1 });
 
     const result = await sell("user-1", "TATA", 2000, 5);
 
-    expect(prismaMock.portfolio.delete).toHaveBeenCalled();
+    expect(prismaMock.portfolio.deleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ version: 0 }),
+      }),
+    );
     expect(result.message).toBe("Position closed");
   });
 
   it("should throw if user tries to sell more than owned", async () => {
-    const existing = {
+    prismaMock.portfolio.findUnique.mockResolvedValueOnce({
       ...mockPortfolio,
       quantity: new Prisma.Decimal(5),
-    };
-
-    prismaMock.portfolio.findUnique.mockResolvedValue(existing);
+    });
 
     await expect(sell("user-1", "TATA", 2000, 100)).rejects.toThrow(
-      BadRequestError
+      BadRequestError,
     );
+    expect(prismaMock.portfolio.updateMany).not.toHaveBeenCalled();
   });
 
   it("should throw if stock not in portfolio", async () => {
-    prismaMock.portfolio.findUnique.mockResolvedValue(null);
+    prismaMock.portfolio.findUnique.mockResolvedValueOnce(null);
 
     await expect(sell("user-1", "TATA", 2000, 5)).rejects.toThrow(
-      BadRequestError
+      BadRequestError,
     );
   });
 });
@@ -138,13 +149,12 @@ describe("Portfolio verify service", () => {
     const result = await verifyy("user-1", "TATA");
 
     expect(result.symbol).toBe("TATA");
+    expect(result.userId).toBe("user-id");
   });
 
   it("should throw if stock not owned", async () => {
     prismaMock.portfolio.findUnique.mockResolvedValue(null);
 
-    await expect(verifyy("user-1", "TATA")).rejects.toThrow(
-      BadRequestError
-    );
+    await expect(verifyy("user-1", "TATA")).rejects.toThrow(BadRequestError);
   });
 });

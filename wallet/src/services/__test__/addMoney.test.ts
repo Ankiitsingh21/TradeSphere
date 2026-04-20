@@ -26,12 +26,17 @@ describe("addMoney service", () => {
     prismaMock.$transaction.mockImplementation(async (fn: any) =>
       fn(prismaMock),
     );
-    prismaMock.wallet.findUnique.mockResolvedValue(mockWallet);
-    prismaMock.wallet.update.mockResolvedValue({
-      ...mockWallet,
-      total_balance: 1500 as any,
-      available_balance: 1500 as any,
-    });
+    // First findUnique = initial read; second findUnique = post-updateMany fetch
+    prismaMock.wallet.findUnique
+      .mockResolvedValueOnce(mockWallet)
+      .mockResolvedValueOnce({
+        ...mockWallet,
+        total_balance: 1500 as any,
+        available_balance: 1500 as any,
+      });
+
+    prismaMock.wallet.updateMany.mockResolvedValue({ count: 1 });
+
     prismaMock.transactions.create.mockResolvedValue({
       id: "txn-1",
       userId: "user-1",
