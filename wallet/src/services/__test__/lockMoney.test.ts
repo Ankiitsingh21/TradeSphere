@@ -27,7 +27,7 @@ describe("lockMoney service", () => {
 
     // default transaction mock
     prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock)
+      fn(prismaMock),
     );
   });
 
@@ -38,7 +38,7 @@ describe("lockMoney service", () => {
         ...mockWallet,
         available_balance: 700 as any,
         locked_balance: 300 as any,
-      }); 
+      });
 
     prismaMock.wallet.updateMany.mockResolvedValue({ count: 1 });
 

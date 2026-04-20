@@ -32,10 +32,9 @@ export const withdraw = async (userID: string, amount: number) => {
         });
 
         if (result.count === 0) {
-          throw Object.assign(
-            new Error("Concurrent modification detected"),
-            { code: "VERSION_CONFLICT" },
-          );
+          throw Object.assign(new Error("Concurrent modification detected"), {
+            code: "VERSION_CONFLICT",
+          });
         }
 
         const update = await tx.wallet.findUnique({ where: { id: wallet.id } });

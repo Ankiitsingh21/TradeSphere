@@ -47,7 +47,9 @@ describe("settleMoney service", () => {
     expect(result.transc.type).toBe("UNLOCK");
     expect(prismaMock.transactions.create).toHaveBeenCalledTimes(2);
     expect(prismaMock.wallet.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ version: 0 }) }),
+      expect.objectContaining({
+        where: expect.objectContaining({ version: 0 }),
+      }),
     );
   });
 
@@ -91,6 +93,8 @@ describe("settleMoney service", () => {
     );
     prismaMock.wallet.findUnique.mockResolvedValueOnce(null);
 
-    await expect(settlemoney("user-1", 500, 0)).rejects.toThrow(BadRequestError);
+    await expect(settlemoney("user-1", 500, 0)).rejects.toThrow(
+      BadRequestError,
+    );
   });
 });

@@ -38,7 +38,10 @@ describe("createWallet service", () => {
   });
 
   it("should return existing wallet without modification when user already has one (upsert no-op)", async () => {
-    const existingWallet = { ...mockWallet, total_balance: new Prisma.Decimal(5000) };
+    const existingWallet = {
+      ...mockWallet,
+      total_balance: new Prisma.Decimal(5000),
+    };
     prismaMock.wallet.upsert.mockResolvedValue(existingWallet);
 
     const result = await createwallet("user-1");

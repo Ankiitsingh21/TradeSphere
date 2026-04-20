@@ -28,10 +28,9 @@ export const addmoney = async (userID: string, amount: number) => {
         });
 
         if (result.count === 0) {
-          throw Object.assign(
-            new Error("Concurrent modification detected"),
-            { code: "VERSION_CONFLICT" },
-          );
+          throw Object.assign(new Error("Concurrent modification detected"), {
+            code: "VERSION_CONFLICT",
+          });
         }
 
         const addmoney = await tx.wallet.findUnique({

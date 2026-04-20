@@ -82,10 +82,7 @@ export const sell = async (
 
     const update = await prisma.order.update({
       where: { id: order.id },
-      data: {
-        status: "PENDING",
-        expiresAt: expiration,
-      },
+      data: { status: "PENDING", expiresAt: expiration },
     });
 
     new TradeOrderCreated(natsWrapper.client).publish({
@@ -109,14 +106,6 @@ export const sell = async (
       expiresAt: expiration!.toISOString(),
     });
 
-    await new SellTradePublisher(natsWrapper.client).publish({
-      userId: order.userId,
-      symbol: symbol,
-      price: tradePriceD,
-      type: TradeType.Sell,
-      quantity: matchedQtyD,
-    });
-
     const { status: creditStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
@@ -129,9 +118,7 @@ export const sell = async (
       const cnt = 1;
 
       const update = await prisma.order.update({
-        where: {
-          id: order.id,
-        },
+        where: { id: order.id },
         data: {
           status: "PARTIAL_FILLED_PAYMENT_FAILURE",
           resolved: creditAmountD.toNumber(),
@@ -152,6 +139,14 @@ export const sell = async (
       return update;
     }
 
+    await new SellTradePublisher(natsWrapper.client).publish({
+      userId: order.userId,
+      symbol: symbol,
+      price: tradePriceD,
+      type: TradeType.Sell,
+      quantity: matchedQtyD,
+    });
+
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
@@ -165,18 +160,9 @@ export const sell = async (
     return update;
   }
 
-  // MATCHED
   const tradePriceD = new Prisma.Decimal(matchedData.data.tradePrice);
   const matchedQtyD = new Prisma.Decimal(matchedData.data.matchedQty);
   const creditAmountD = tradePriceD.mul(matchedQtyD);
-
-  await new SellTradePublisher(natsWrapper.client).publish({
-    userId: order.userId,
-    symbol: order.symbol,
-    price: tradePriceD,
-    type: TradeType.Sell,
-    quantity: matchedQtyD,
-  });
 
   const { status: creditStatus } = await callService(
     "http://wallet-srv:3000/api/wallet/credit-money",
@@ -190,9 +176,7 @@ export const sell = async (
     const cnt = 1;
 
     const update = await prisma.order.update({
-      where: {
-        id: order.id,
-      },
+      where: { id: order.id },
       data: {
         status: "PAYMENT_FAILURE",
         resolved: creditAmountD.toNumber(),
@@ -213,6 +197,14 @@ export const sell = async (
     return update;
   }
 
+  await new SellTradePublisher(natsWrapper.client).publish({
+    userId: order.userId,
+    symbol: order.symbol,
+    price: tradePriceD,
+    type: TradeType.Sell,
+    quantity: matchedQtyD,
+  });
+
   const final = await prisma.order.update({
     where: { id: order.id },
     data: {
@@ -227,7 +219,7 @@ export const sell = async (
 
 const callService = async (url: string, method: string, payload: any) => {
   try {
-    const response = await axios({ method, url, data: payload });
+    const response = await axios({ method, url, data: payload, timeout: 5000 });
     return { data: response.data, status: response.status };
   } catch (error: any) {
     return {

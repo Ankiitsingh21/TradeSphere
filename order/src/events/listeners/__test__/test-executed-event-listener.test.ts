@@ -20,6 +20,7 @@ import {
   OrderType,
 } from "../../../generated/prisma/client";
 import { Message } from "node-nats-streaming";
+import { version } from "node:os";
 
 const mockMsg = { ack: jest.fn() } as unknown as Message;
 
@@ -34,6 +35,7 @@ const basePendingOrder = {
   price: new Prisma.Decimal(2000),
   resolved: new Prisma.Decimal(0),
   expiresAt: new Date(Date.now() + 60000),
+  version: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -130,7 +132,10 @@ describe("TradeExecutedListener", () => {
   describe("handleBuySettlement", () => {
     it("should call settle-money, update order to SUCCESS, and publish BuyTrade", async () => {
       prismaMock.order.findUnique.mockResolvedValue(basePendingOrder);
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.update.mockResolvedValue({
         ...basePendingOrder,
         status: OrderStatus.SUCCESS,
@@ -157,7 +162,7 @@ describe("TradeExecutedListener", () => {
         }),
       );
       // BuyTrade published via NATS
-      expect((natsWrapper.client.publish as jest.Mock)).toHaveBeenCalled();
+      expect(natsWrapper.client.publish as jest.Mock).toHaveBeenCalled();
       expect(mockMsg.ack).toHaveBeenCalledTimes(1);
     });
 
@@ -176,13 +181,16 @@ describe("TradeExecutedListener", () => {
           data: expect.objectContaining({ status: "PAYMENT_FAILURE" }),
         }),
       );
-      expect((natsWrapper.client.publish as jest.Mock)).toHaveBeenCalled();
+      expect(natsWrapper.client.publish as jest.Mock).toHaveBeenCalled();
       expect(mockMsg.ack).toHaveBeenCalledTimes(1);
     });
 
     it("should default releaseAmount to 0 when not provided", async () => {
       prismaMock.order.findUnique.mockResolvedValue(basePendingOrder);
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.update.mockResolvedValue({
         ...basePendingOrder,
         status: OrderStatus.SUCCESS,
@@ -207,7 +215,10 @@ describe("TradeExecutedListener", () => {
     it("should compute settleAmount as lockAmount minus releaseAmount", async () => {
       // price=2000 * qty=10 = lockAmount=20000, releaseAmount=500 → settleAmount=19500
       prismaMock.order.findUnique.mockResolvedValue(basePendingOrder);
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.update.mockResolvedValue({
         ...basePendingOrder,
         status: OrderStatus.SUCCESS,
@@ -216,7 +227,10 @@ describe("TradeExecutedListener", () => {
         price: new Prisma.Decimal(2000),
       });
 
-      await listener.onMessage({ ...buyEventData, releaseAmount: 500 }, mockMsg);
+      await listener.onMessage(
+        { ...buyEventData, releaseAmount: 500 },
+        mockMsg,
+      );
 
       expect(mockedAxios).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -236,7 +250,10 @@ describe("TradeExecutedListener", () => {
         ...basePendingOrder,
         type: OrderType.SELL,
       });
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.update.mockResolvedValue({
         ...basePendingOrder,
         type: OrderType.SELL,
@@ -262,7 +279,7 @@ describe("TradeExecutedListener", () => {
           data: expect.objectContaining({ status: "SUCCESS" }),
         }),
       );
-      expect((natsWrapper.client.publish as jest.Mock)).toHaveBeenCalled();
+      expect(natsWrapper.client.publish as jest.Mock).toHaveBeenCalled();
       expect(mockMsg.ack).toHaveBeenCalledTimes(1);
     });
 
@@ -286,7 +303,7 @@ describe("TradeExecutedListener", () => {
           data: expect.objectContaining({ status: "PAYMENT_FAILURE" }),
         }),
       );
-      expect((natsWrapper.client.publish as jest.Mock)).toHaveBeenCalled();
+      expect(natsWrapper.client.publish as jest.Mock).toHaveBeenCalled();
       expect(mockMsg.ack).toHaveBeenCalledTimes(1);
     });
 
@@ -295,7 +312,10 @@ describe("TradeExecutedListener", () => {
         ...basePendingOrder,
         type: OrderType.SELL,
       });
-      mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
       prismaMock.order.update.mockResolvedValue({
         ...basePendingOrder,
         type: OrderType.SELL,

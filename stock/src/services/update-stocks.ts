@@ -2,28 +2,34 @@ import { BadRequestError } from "@showsphere/common";
 import { prisma } from "../config/db";
 
 export const update = async (symbol: string, price: number) => {
-
   const find = await prisma.stock.findUnique({
-    where:{
-      symbol:symbol
-    }
-  })
+    where: { symbol: symbol },
+  });
 
-  if(!find){
+  if (!find) {
     throw new BadRequestError("stock not found");
   }
-  // console.log(symbol)
-  const stock = await prisma.stock.update({
+
+  const result = await prisma.stock.updateMany({
     where: {
-      symbol: symbol
+      symbol: symbol,
+      version: find.version,
     },
     data: {
       price: price,
+      version: { increment: 1 },
     },
   });
-  if (!stock) {
+
+  if (result.count === 0) {
+    throw new BadRequestError("Concurrent price update detected, please retry");
+  }
+
+  const updated = await prisma.stock.findUnique({ where: { symbol: symbol } });
+
+  if (!updated) {
     throw new BadRequestError("not able to update stock");
   }
 
-  return stock;
+  return updated;
 };

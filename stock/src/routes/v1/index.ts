@@ -30,12 +30,11 @@ const router = express.Router();
 
 router.get("/all", requireAuth, getStocks);
 
-router.get('/internal-all',getStocks);
+router.get("/internal-all", getStocks);
 
 router.get("/symbol", requireAuth, getByName);
 
-
-router.get('/internal-symbol',getByName);
+router.get("/internal-symbol", getByName);
 
 router.post(
   "/create",

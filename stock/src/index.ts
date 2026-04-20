@@ -1,5 +1,5 @@
 import { app } from "./app";
-import { connectDB } from "./config/db";
+import { connectDB, prisma } from "./config/db";
 import { natsWrapper } from "./natswrapper";
 import { marketcreate } from "./services/create-market";
 import { seed } from "./services/seed-stocks";
@@ -42,8 +42,10 @@ const start = async () => {
     process.exit(1);
   }
 
-  await seed("NIFTY 500");
-  // console.log(see);
+  const existingCount = await prisma.stock.count();
+  if (existingCount === 0) {
+    await seed("NIFTY 500");
+  }
   await marketcreate();
 
   app.listen(3000, () => {

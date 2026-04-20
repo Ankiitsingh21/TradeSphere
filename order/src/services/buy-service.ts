@@ -38,10 +38,8 @@ export const buy = async (
     const response = await axios({
       method: "patch",
       url: "http://wallet-srv:3000/api/wallet/lock-money",
-      data: {
-        userID: userID,
-        amount: lockamountD.toNumber(),
-      },
+      data: { userID: userID, amount: lockamountD.toNumber() },
+      timeout: 5000,
     });
     data = response.data;
     status = response.status;
@@ -88,11 +86,7 @@ export const buy = async (
     await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
       "patch",
-      {
-        settleamount: 0,
-        releaseamount: lockamountD.toNumber(),
-        userID,
-      },
+      { settleamount: 0, releaseamount: lockamountD.toNumber(), userID },
     );
     throw new BadRequestError("problem in matching engine");
   }
@@ -135,15 +129,6 @@ export const buy = async (
       expiresAt: expiration!.toISOString(),
     });
 
-    // Fix: use order.userId and symbol (not matchedData fields), pass Decimal-safe price
-    new BuyTradePublisher(natsWrapper.client).publish({
-      userId: order.userId,
-      symbol: symbol,
-      price: tradePriceD,
-      quantity: matchedQtyD,
-      type: TradeType.Buy,
-    });
-
     const { data: settleData, status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
       "patch",
@@ -160,9 +145,7 @@ export const buy = async (
       const cnt = 1;
 
       const update = await prisma.order.update({
-        where: {
-          id: order.id,
-        },
+        where: { id: order.id },
         data: {
           resolved: settleAmountD.toNumber(),
           matchedQuantity: matchedQtyD.toNumber(),
@@ -185,6 +168,14 @@ export const buy = async (
       return update;
     }
 
+    new BuyTradePublisher(natsWrapper.client).publish({
+      userId: order.userId,
+      symbol: symbol,
+      price: tradePriceD,
+      quantity: matchedQtyD,
+      type: TradeType.Buy,
+    });
+
     const update = await prisma.order.update({
       where: { id: order.id },
       data: {
@@ -198,21 +189,12 @@ export const buy = async (
     return update;
   }
 
-  // MATCHED
   const tradePriceD = new Prisma.Decimal(matchedData.data.tradePrice);
   const matchedQtyD = new Prisma.Decimal(matchedData.data.matchedQty);
   const releaseAmountD = matchedData.data.releaseAmount
     ? new Prisma.Decimal(matchedData.data.releaseAmount)
     : new Prisma.Decimal(0);
   const settleAmountD = lockamountD.minus(releaseAmountD);
-
-  new BuyTradePublisher(natsWrapper.client).publish({
-    userId: order.userId,
-    symbol: symbol,
-    price: tradePriceD,
-    quantity: matchedQtyD,
-    type: TradeType.Buy,
-  });
 
   const { data: settleData, status: settleStatus } = await callService(
     "http://wallet-srv:3000/api/wallet/settle-money",
@@ -230,9 +212,7 @@ export const buy = async (
     const cnt = 1;
 
     const fail = await prisma.order.update({
-      where: {
-        id: order.id,
-      },
+      where: { id: order.id },
       data: {
         status: "PAYMENT_FAILURE",
         resolved: settleAmountD.toNumber(),
@@ -256,6 +236,14 @@ export const buy = async (
     return fail;
   }
 
+  new BuyTradePublisher(natsWrapper.client).publish({
+    userId: order.userId,
+    symbol: symbol,
+    price: tradePriceD,
+    quantity: matchedQtyD,
+    type: TradeType.Buy,
+  });
+
   const final = await prisma.order.update({
     where: { id: order.id },
     data: {
@@ -270,7 +258,7 @@ export const buy = async (
 
 const callService = async (url: string, method: string, payload: any) => {
   try {
-    const response = await axios({ method, url, data: payload });
+    const response = await axios({ method, url, data: payload, timeout: 5000 });
     return { data: response.data, status: response.status };
   } catch (error: any) {
     return {

@@ -40,7 +40,15 @@ describe("buy service", () => {
       mockedAxios
         .mockResolvedValueOnce({ data: { success: true }, status: 201 }) // lock
         .mockResolvedValueOnce({
-          data: { success: true, data: { status: "MATCHED", matchedQty: 5, tradePrice: 1950, releaseAmount: 250 } },
+          data: {
+            success: true,
+            data: {
+              status: "MATCHED",
+              matchedQty: 5,
+              tradePrice: 1950,
+              releaseAmount: 250,
+            },
+          },
           status: 201,
         }) // trade engine
         .mockResolvedValueOnce({ data: { success: true }, status: 201 }); // settle
@@ -60,7 +68,15 @@ describe("buy service", () => {
       mockedAxios
         .mockResolvedValueOnce({ data: { success: true }, status: 201 }) // lock
         .mockResolvedValueOnce({
-          data: { success: true, data: { status: "MATCHED", matchedQty: 5, tradePrice: 1950, releaseAmount: 250 } },
+          data: {
+            success: true,
+            data: {
+              status: "MATCHED",
+              matchedQty: 5,
+              tradePrice: 1950,
+              releaseAmount: 250,
+            },
+          },
           status: 201,
         }) // trade engine
         .mockResolvedValueOnce({ data: {}, status: 500 }); // settle FAILS
@@ -102,7 +118,15 @@ describe("buy service", () => {
       mockedAxios
         .mockResolvedValueOnce({ data: { success: true }, status: 201 }) // lock
         .mockResolvedValueOnce({
-          data: { success: true, data: { status: "PARTIAL", matchedQty: 3, tradePrice: 1950, releaseAmount: 150 } },
+          data: {
+            success: true,
+            data: {
+              status: "PARTIAL",
+              matchedQty: 3,
+              tradePrice: 1950,
+              releaseAmount: 150,
+            },
+          },
           status: 201,
         }) // trade engine
         .mockResolvedValueOnce({ data: { success: true }, status: 201 }); // settle
@@ -121,7 +145,15 @@ describe("buy service", () => {
       mockedAxios
         .mockResolvedValueOnce({ data: { success: true }, status: 201 }) // lock
         .mockResolvedValueOnce({
-          data: { success: true, data: { status: "PARTIAL", matchedQty: 3, tradePrice: 1950, releaseAmount: 150 } },
+          data: {
+            success: true,
+            data: {
+              status: "PARTIAL",
+              matchedQty: 3,
+              tradePrice: 1950,
+              releaseAmount: 150,
+            },
+          },
           status: 201,
         }) // trade engine
         .mockResolvedValueOnce({ data: {}, status: 500 }); // settle FAILS
@@ -136,7 +168,9 @@ describe("buy service", () => {
       expect(result.status).toBe("PARTIAL_FILLED_PAYMENT_FAILURE");
       expect(prismaMock.order.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ status: "PARTIAL_FILLED_PAYMENT_FAILURE" }),
+          data: expect.objectContaining({
+            status: "PARTIAL_FILLED_PAYMENT_FAILURE",
+          }),
         }),
       );
     });
@@ -193,7 +227,15 @@ describe("buy service", () => {
         }) // stock price
         .mockResolvedValueOnce({ data: { success: true }, status: 201 }) // lock
         .mockResolvedValueOnce({
-          data: { success: true, data: { status: "MATCHED", matchedQty: 5, tradePrice: 2000, releaseAmount: 0 } },
+          data: {
+            success: true,
+            data: {
+              status: "MATCHED",
+              matchedQty: 5,
+              tradePrice: 2000,
+              releaseAmount: 0,
+            },
+          },
           status: 201,
         }) // trade engine
         .mockResolvedValueOnce({ data: { success: true }, status: 201 }); // settle

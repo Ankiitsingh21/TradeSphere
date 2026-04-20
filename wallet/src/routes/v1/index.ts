@@ -74,11 +74,9 @@ router.patch(
     body().custom((_, { req }) => {
       const settle = parseFloat(req.body.settleamount);
       const release = parseFloat(req.body.releaseamount);
-      if (isNaN(settle) || isNaN(release)) return true; 
+      if (isNaN(settle) || isNaN(release)) return true;
       if (settle + release <= 0) {
-        throw new Error(
-          "settleamount + releaseamount must be greater than 0",
-        );
+        throw new Error("settleamount + releaseamount must be greater than 0");
       }
       return true;
     }),

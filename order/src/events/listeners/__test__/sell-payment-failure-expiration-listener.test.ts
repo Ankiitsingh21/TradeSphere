@@ -32,6 +32,7 @@ const baseOrder = {
   matchedQuantity: new Prisma.Decimal(5),
   price: new Prisma.Decimal(2000),
   resolved: new Prisma.Decimal(0),
+  version :0,
   expiresAt: new Date(),
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -111,7 +112,10 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
       status: OrderStatus.SUCCESS,
     });
 
-    await listener.onMessage({ ...baseEventData, status: "PAYMENT_FAILURE" }, mockMsg);
+    await listener.onMessage(
+      { ...baseEventData, status: "PAYMENT_FAILURE" },
+      mockMsg,
+    );
 
     expect(mockedAxios).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -168,7 +172,7 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
         data: expect.objectContaining({ status: "PAYMENT_FAILURE" }),
       }),
     );
-    expect((natsWrapper.client.publish as jest.Mock)).toHaveBeenCalled();
+    expect(natsWrapper.client.publish as jest.Mock).toHaveBeenCalled();
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
   });
 

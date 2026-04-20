@@ -33,6 +33,7 @@ const pendingOrder = {
   price: new Prisma.Decimal(2000),
   resolved: new Prisma.Decimal(0),
   expiresAt: new Date(),
+  version: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -49,7 +50,10 @@ describe("OrderCancelledListener", () => {
   it("should ack and skip when order not found", async () => {
     prismaMock.order.findUnique.mockResolvedValue(null);
 
-    await listener.onMessage({ orderId: "nonexistent", releaseAmount: 1000 }, mockMsg);
+    await listener.onMessage(
+      { orderId: "nonexistent", releaseAmount: 1000 },
+      mockMsg,
+    );
 
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
     expect(prismaMock.order.update).not.toHaveBeenCalled();
@@ -63,7 +67,10 @@ describe("OrderCancelledListener", () => {
       status: OrderStatus.EXPIRED,
     });
 
-    await listener.onMessage({ orderId: "order-1", releaseAmount: 1000 }, mockMsg);
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 1000 },
+      mockMsg,
+    );
 
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
     expect(prismaMock.order.update).not.toHaveBeenCalled();
@@ -76,7 +83,10 @@ describe("OrderCancelledListener", () => {
       status: OrderStatus.PARTIAL_EXPIRED,
     });
 
-    await listener.onMessage({ orderId: "order-1", releaseAmount: 1000 }, mockMsg);
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 1000 },
+      mockMsg,
+    );
 
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
     expect(prismaMock.order.update).not.toHaveBeenCalled();
@@ -95,7 +105,10 @@ describe("OrderCancelledListener", () => {
     });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
-    await listener.onMessage({ orderId: "order-1", releaseAmount: 20000 }, mockMsg);
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 20000 },
+      mockMsg,
+    );
 
     expect(prismaMock.order.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: "EXPIRED" } }),
@@ -114,7 +127,10 @@ describe("OrderCancelledListener", () => {
     });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
-    await listener.onMessage({ orderId: "order-1", releaseAmount: 20000 }, mockMsg);
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 20000 },
+      mockMsg,
+    );
 
     expect(prismaMock.order.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: "EXPIRED" } }),
@@ -132,7 +148,10 @@ describe("OrderCancelledListener", () => {
     });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
-    await listener.onMessage({ orderId: "order-1", releaseAmount: 10000 }, mockMsg);
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 10000 },
+      mockMsg,
+    );
 
     expect(prismaMock.order.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: "PARTIAL_EXPIRED" } }),
@@ -149,7 +168,10 @@ describe("OrderCancelledListener", () => {
     });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
-    await listener.onMessage({ orderId: "order-1", releaseAmount: 15000 }, mockMsg);
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 15000 },
+      mockMsg,
+    );
 
     expect(mockedAxios).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -172,7 +194,10 @@ describe("OrderCancelledListener", () => {
     });
     mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
 
-    await listener.onMessage({ orderId: "order-1", releaseAmount: 20000 }, mockMsg);
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 20000 },
+      mockMsg,
+    );
 
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
   });

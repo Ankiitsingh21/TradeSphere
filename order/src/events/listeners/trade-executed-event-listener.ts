@@ -44,7 +44,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
         "PAYMENT_FAILURE",
         "PARTIAL_FILLED_PAYMENT_FAILURE",
       ];
-      if (NON_PROCESSABLE.includes(order.status)) {               
+      if (NON_PROCESSABLE.includes(order.status)) {
         msg.ack();
         return;
       }
@@ -65,7 +65,6 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
     order: any,
     data: TradeExecutedEvent["data"],
   ) {
-    // Fix: use Prisma.Decimal to avoid float precision loss on financial amounts
     const lockamountD = new Prisma.Decimal(order.price).mul(
       new Prisma.Decimal(order.totalQuantity),
     );
@@ -88,17 +87,20 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
     expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
 
     if (!settleStatus || settleStatus !== 201) {
-      const cnt = 1;
-
-      await prisma.order.update({
-        where: { id: order.id },
+      const result = await prisma.order.updateMany({
+        where: { id: order.id, version: order.version },
         data: {
           status: "PAYMENT_FAILURE",
           resolved: settleAmountD.toNumber(),
           matchedQuantity: data.matchedQty,
           expiresAt: expiration,
+          version: { increment: 1 },
         },
       });
+
+      if (result.count === 0) {
+        return;
+      }
 
       await new PaymentFailurePublisher(natsWrapper.client).publish({
         orderId: order.id,
@@ -109,33 +111,36 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
         releaseamount: releaseAmountD.toNumber(),
         status: "PAYMENT_FAILURE",
         userId: order.userId,
-        cnt,
+        cnt: 1,
       });
 
       return;
     }
 
-    // SUCCESS
-    const updated = await prisma.order.update({
-      where: { id: order.id },
+    const result = await prisma.order.updateMany({
+      where: { id: order.id, version: order.version },
       data: {
         status: "SUCCESS",
         resolved: settleAmountD.toNumber(),
         matchedQuantity: data.matchedQty,
+        version: { increment: 1 },
       },
     });
 
+    if (result.count === 0) {
+      return;
+    }
+
     await new BuyTradePublisher(natsWrapper.client).publish({
-      userId: updated.userId,
-      symbol: updated.symbol,
-      price: updated.price,
+      userId: order.userId,
+      symbol: order.symbol,
+      price: order.price,
       quantity: data.matchedQty,
       type: TradeType.Buy,
     });
   }
 
   private async handleSellCredit(order: any, data: TradeExecutedEvent["data"]) {
-    // Fix: use Prisma.Decimal to avoid float precision loss
     const creditAmountD = new Prisma.Decimal(data.tradePrice).mul(
       new Prisma.Decimal(data.matchedQty),
     );
@@ -153,17 +158,20 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
     expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
 
     if (!creditStatus || creditStatus !== 201) {
-      const cnt = 1;
-
-      await prisma.order.update({
-        where: { id: order.id },
+      const result = await prisma.order.updateMany({
+        where: { id: order.id, version: order.version },
         data: {
           status: "PAYMENT_FAILURE",
           resolved: creditAmountD.toNumber(),
           matchedQuantity: data.matchedQty,
           expiresAt: expiration,
+          version: { increment: 1 },
         },
       });
+
+      if (result.count === 0) {
+        return;
+      }
 
       await new SellPaymentFailurePublisher(natsWrapper.client).publish({
         orderId: order.id,
@@ -171,26 +179,30 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
         amount: creditAmountD.toNumber(),
         userId: order.userId,
         status: "PAYMENT_FAILURE",
-        cnt,
+        cnt: 1,
       });
 
       return;
     }
 
-    // SUCCESS
-    const updated = await prisma.order.update({
-      where: { id: order.id },
+    const result = await prisma.order.updateMany({
+      where: { id: order.id, version: order.version },
       data: {
         status: "SUCCESS",
         resolved: creditAmountD.toNumber(),
         matchedQuantity: data.matchedQty,
+        version: { increment: 1 },
       },
     });
 
+    if (result.count === 0) {
+      return;
+    }
+
     await new SellTradePublisher(natsWrapper.client).publish({
-      userId: updated.userId,
-      symbol: updated.symbol,
-      price: updated.price,
+      userId: order.userId,
+      symbol: order.symbol,
+      price: order.price,
       quantity: data.matchedQty,
       type: TradeType.Sell,
     });
@@ -199,7 +211,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
 
 const callService = async (url: string, method: string, payload: any) => {
   try {
-    const response = await axios({ method, url, data: payload });
+    const response = await axios({ method, url, data: payload, timeout: 5000 });
     return { data: response.data, status: response.status };
   } catch (error: any) {
     return {

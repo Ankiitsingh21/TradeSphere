@@ -48,9 +48,15 @@ describe("sell service", () => {
   // ─── MATCHED flow ─────────────────────────────────────────────────────────
   it("should complete SELL MATCHED flow — SUCCESS", async () => {
     mockedAxios
-      .mockResolvedValueOnce({ data: { success: true, data: mockHoldings }, status: 201 }) // verify
       .mockResolvedValueOnce({
-        data: { success: true, data: { status: "MATCHED", matchedQty: 5, tradePrice: 2000 } },
+        data: { success: true, data: mockHoldings },
+        status: 201,
+      }) // verify
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: { status: "MATCHED", matchedQty: 5, tradePrice: 2000 },
+        },
         status: 201,
       }) // trade engine
       .mockResolvedValueOnce({ data: { success: true }, status: 201 }); // credit
@@ -67,9 +73,15 @@ describe("sell service", () => {
 
   it("should set PAYMENT_FAILURE and publish SellPaymentFailure when credit fails after MATCHED", async () => {
     mockedAxios
-      .mockResolvedValueOnce({ data: { success: true, data: mockHoldings }, status: 201 }) // verify
       .mockResolvedValueOnce({
-        data: { success: true, data: { status: "MATCHED", matchedQty: 5, tradePrice: 2000 } },
+        data: { success: true, data: mockHoldings },
+        status: 201,
+      }) // verify
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: { status: "MATCHED", matchedQty: 5, tradePrice: 2000 },
+        },
         status: 201,
       }) // trade engine
       .mockResolvedValueOnce({ data: {}, status: 500 }); // credit FAILS
@@ -93,7 +105,10 @@ describe("sell service", () => {
   // ─── QUEUED flow ──────────────────────────────────────────────────────────
   it("should handle SELL QUEUED — order stays PENDING", async () => {
     mockedAxios
-      .mockResolvedValueOnce({ data: { success: true, data: mockHoldings }, status: 201 }) // verify
+      .mockResolvedValueOnce({
+        data: { success: true, data: mockHoldings },
+        status: 201,
+      }) // verify
       .mockResolvedValueOnce({
         data: { success: true, data: { status: "QUEUED" } },
         status: 201,
@@ -112,9 +127,15 @@ describe("sell service", () => {
   // ─── PARTIAL flow ─────────────────────────────────────────────────────────
   it("should handle SELL PARTIAL — partial credit → PARTIAL_FILLED", async () => {
     mockedAxios
-      .mockResolvedValueOnce({ data: { success: true, data: mockHoldings }, status: 201 }) // verify
       .mockResolvedValueOnce({
-        data: { success: true, data: { status: "PARTIAL", matchedQty: 3, tradePrice: 2000 } },
+        data: { success: true, data: mockHoldings },
+        status: 201,
+      }) // verify
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: { status: "PARTIAL", matchedQty: 3, tradePrice: 2000 },
+        },
         status: 201,
       }) // trade engine
       .mockResolvedValueOnce({ data: { success: true }, status: 201 }); // credit
@@ -131,9 +152,15 @@ describe("sell service", () => {
 
   it("should set PARTIAL_FILLED_PAYMENT_FAILURE when credit fails after PARTIAL trade", async () => {
     mockedAxios
-      .mockResolvedValueOnce({ data: { success: true, data: mockHoldings }, status: 201 }) // verify
       .mockResolvedValueOnce({
-        data: { success: true, data: { status: "PARTIAL", matchedQty: 3, tradePrice: 2000 } },
+        data: { success: true, data: mockHoldings },
+        status: 201,
+      }) // verify
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: { status: "PARTIAL", matchedQty: 3, tradePrice: 2000 },
+        },
         status: 201,
       }) // trade engine
       .mockResolvedValueOnce({ data: {}, status: 500 }); // credit FAILS
@@ -171,7 +198,10 @@ describe("sell service", () => {
 
   it("should throw if user tries to sell more than owned quantity", async () => {
     mockedAxios.mockResolvedValueOnce({
-      data: { success: true, data: { ...mockHoldings, quantity: new Prisma.Decimal(3) } },
+      data: {
+        success: true,
+        data: { ...mockHoldings, quantity: new Prisma.Decimal(3) },
+      },
       status: 201,
     });
 
@@ -183,7 +213,10 @@ describe("sell service", () => {
 
   it("should set order FAILED and throw if trade engine returns 500", async () => {
     mockedAxios
-      .mockResolvedValueOnce({ data: { success: true, data: mockHoldings }, status: 201 }) // verify
+      .mockResolvedValueOnce({
+        data: { success: true, data: mockHoldings },
+        status: 201,
+      }) // verify
       .mockResolvedValueOnce({ data: {}, status: 500 }); // trade engine FAILS
 
     prismaMock.order.create.mockResolvedValue(mockOrder);

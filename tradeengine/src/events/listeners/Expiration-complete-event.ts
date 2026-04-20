@@ -35,18 +35,26 @@ export class ExpirationCompleteListener extends Listener<ExpirationCompleteEvent
 
     if (orderRecord.status === TradeStatus.PENDING) {
       book.cancelledOrders.add(data.orderId);
-      await prisma.orderBook.update({
+      const r1 = await prisma.orderBook.updateMany({
         where: {
           id: orderRecord.id,
+          version: orderRecord.version,
         },
         data: {
           status: "EXPIRED",
+          version: { increment: 1 },
         },
       });
 
+      if (r1.count === 0) {
+        msg.ack();
+        return;
+      }
+
       const releaseamount =
         Number(orderRecord.totalQuantity) * Number(orderRecord.price);
-      new OrderCancelledPublisher(natsWrapper.client).publish({
+
+      await new OrderCancelledPublisher(natsWrapper.client).publish({
         orderId: data.orderId,
         releaseAmount: releaseamount,
       });
@@ -55,26 +63,33 @@ export class ExpirationCompleteListener extends Listener<ExpirationCompleteEvent
     if (orderRecord.status === TradeStatus.PARTIAL) {
       book.cancelledOrders.add(`${data.orderId}-remaining`);
 
-      await prisma.orderBook.update({
+      const r2 = await prisma.orderBook.updateMany({
         where: {
           id: orderRecord.id,
+          version: orderRecord.version,
         },
         data: {
           status: "EXPIRED",
+          version: { increment: 1 },
         },
       });
 
-      // const releaseamount = update.totalQuantity - update.matchedQuantity
+      if (r2.count === 0) {
+        msg.ack();
+        return;
+      }
+
       const unmatchedQty =
         Number(orderRecord.totalQuantity) - Number(orderRecord.matchedQuantity);
+
       const releaseamount = Number(orderRecord.price) * unmatchedQty;
-      new OrderCancelledPublisher(natsWrapper.client).publish({
+
+      await new OrderCancelledPublisher(natsWrapper.client).publish({
         orderId: data.orderId,
         releaseAmount: releaseamount,
       });
     }
 
-    // console.log(orderRecord);
     msg.ack();
   }
 }

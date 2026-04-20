@@ -16,14 +16,13 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
   subject: Subjects.PaymentFailureExpirationComplete =
     Subjects.PaymentFailureExpirationComplete;
   queueGroupName: string = queueGroupName;
+
   async onMessage(
     data: PaymentFailureExpirationCompleteEvent["data"],
     msg: Message,
   ) {
     const order = await prisma.order.findUnique({
-      where: {
-        id: data.orderId,
-      },
+      where: { id: data.orderId },
     });
 
     if (!order) {
@@ -31,11 +30,11 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
       msg.ack();
       return;
     }
+
     if (order.status === "EXPIRED" || order.status === "PARTIAL_EXPIRED") {
       msg.ack();
       return;
     }
-    
 
     if (data.cnt > 3) {
       for (let i = 0; i < 5; i++) {
@@ -47,8 +46,6 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
       msg.ack();
       return;
     }
-
-    // if(data.status==="PARTIAL_FILLED_PAYMENT_FAILURE"){
 
     const { data: settleData, status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
@@ -66,22 +63,26 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
       expiration.setSeconds(
         expiration.getSeconds() + EXPRIATION_WINDOW_SECOND * cnt,
       );
-      //       const cnt=1;
 
       const finalstatus =
         data.matchedQuantity < Number(order.totalQuantity)
           ? "PARTIAL_FILLED_PAYMENT_FAILURE"
           : "PAYMENT_FAILURE";
 
-      await prisma.order.update({
-        where: {
-          id: order.id,
-        },
+      const result = await prisma.order.updateMany({
+        where: { id: order.id, version: order.version },
         data: {
           expiresAt: expiration,
           status: finalstatus,
+          version: { increment: 1 },
         },
       });
+
+      if (result.count === 0) {
+        msg.ack();
+        return;
+      }
+
       await new PaymentFailurePublisher(natsWrapper.client).publish({
         orderId: order.id,
         expiresAt: expiration!.toISOString(),
@@ -96,7 +97,6 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
 
       msg.ack();
       return;
-      // }
     }
 
     const finalStatus =
@@ -104,14 +104,20 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
         ? "SUCCESS"
         : "PARTIAL_FILLED";
 
-    await prisma.order.update({
-      where: { id: order.id },
+    const result = await prisma.order.updateMany({
+      where: { id: order.id, version: order.version },
       data: {
         status: finalStatus,
         resolved: data.settleamount,
         matchedQuantity: data.matchedQuantity,
+        version: { increment: 1 },
       },
     });
+
+    if (result.count === 0) {
+      msg.ack();
+      return;
+    }
 
     msg.ack();
     return;
@@ -120,7 +126,7 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
 
 const callService = async (url: string, method: string, payload: any) => {
   try {
-    const response = await axios({ method, url, data: payload });
+    const response = await axios({ method, url, data: payload, timeout: 5000 });
     return { data: response.data, status: response.status };
   } catch (error: any) {
     return {

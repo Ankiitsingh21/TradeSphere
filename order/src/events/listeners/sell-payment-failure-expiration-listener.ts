@@ -24,9 +24,7 @@ export class SellPaymentFailureExpirationcompleteListener extends Listener<SellP
     msg: Message,
   ) {
     const order = await prisma.order.findUnique({
-      where: {
-        id: data.orderId,
-      },
+      where: { id: data.orderId },
     });
 
     if (!order) {
@@ -36,6 +34,7 @@ export class SellPaymentFailureExpirationcompleteListener extends Listener<SellP
       msg.ack();
       return;
     }
+
     if (order.status === "EXPIRED" || order.status === "PARTIAL_EXPIRED") {
       msg.ack();
       return;
@@ -50,7 +49,6 @@ export class SellPaymentFailureExpirationcompleteListener extends Listener<SellP
       return;
     }
 
-    // retry credit
     const { status: creditStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
@@ -62,34 +60,36 @@ export class SellPaymentFailureExpirationcompleteListener extends Listener<SellP
 
     if (!creditStatus || creditStatus !== 201) {
       const cnt = data.cnt + 1;
-
       const expiration = new Date();
       expiration.setSeconds(
         expiration.getSeconds() + EXPRIATION_WINDOW_SECOND * cnt,
       );
 
-      // map string → enum safely
       const finalstatus =
         data.status === "PARTIAL_FILLED_PAYMENT_FAILURE"
           ? OrderStatus.PARTIAL_FILLED_PAYMENT_FAILURE
           : OrderStatus.PAYMENT_FAILURE;
 
-      await prisma.order.update({
-        where: {
-          id: order.id,
-        },
+      const result = await prisma.order.updateMany({
+        where: { id: order.id, version: order.version },
         data: {
           expiresAt: expiration,
           status: finalstatus,
+          version: { increment: 1 },
         },
       });
+
+      if (result.count === 0) {
+        msg.ack();
+        return;
+      }
 
       await new SellPaymentFailurePublisher(natsWrapper.client).publish({
         orderId: order.id,
         expiresAt: expiration.toISOString(),
         amount: data.amount,
         userId: order.userId,
-        status: finalstatus, // still enum → OK if shared type supports
+        status: finalstatus,
         cnt: cnt,
       });
 
@@ -97,19 +97,24 @@ export class SellPaymentFailureExpirationcompleteListener extends Listener<SellP
       return;
     }
 
-    // SUCCESS
     const finalStatus =
       data.status === "PARTIAL_FILLED_PAYMENT_FAILURE"
         ? OrderStatus.PARTIAL_FILLED
         : OrderStatus.SUCCESS;
 
-    await prisma.order.update({
-      where: { id: order.id },
+    const result = await prisma.order.updateMany({
+      where: { id: order.id, version: order.version },
       data: {
         status: finalStatus,
         resolved: data.amount,
+        version: { increment: 1 },
       },
     });
+
+    if (result.count === 0) {
+      msg.ack();
+      return;
+    }
 
     msg.ack();
     return;
@@ -118,7 +123,7 @@ export class SellPaymentFailureExpirationcompleteListener extends Listener<SellP
 
 const callService = async (url: string, method: string, payload: any) => {
   try {
-    const response = await axios({ method, url, data: payload });
+    const response = await axios({ method, url, data: payload, timeout: 5000 });
     return { data: response.data, status: response.status };
   } catch (error: any) {
     return {

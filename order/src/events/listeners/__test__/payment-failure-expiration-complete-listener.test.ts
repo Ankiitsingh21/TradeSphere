@@ -32,6 +32,7 @@ const paymentFailureOrder = {
   matchedQuantity: new Prisma.Decimal(10),
   price: new Prisma.Decimal(2000),
   resolved: new Prisma.Decimal(0),
+  version :0,
   expiresAt: new Date(),
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -102,7 +103,7 @@ describe("PaymentFailureExpirationCompleteListener", () => {
 
     expect(mockedAxios).not.toHaveBeenCalled();
     expect(prismaMock.order.update).not.toHaveBeenCalled();
-    expect((natsWrapper.client.publish as jest.Mock)).not.toHaveBeenCalled();
+    expect(natsWrapper.client.publish as jest.Mock).not.toHaveBeenCalled();
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
   });
 
@@ -118,7 +119,10 @@ describe("PaymentFailureExpirationCompleteListener", () => {
       status: OrderStatus.SUCCESS,
     });
 
-    await listener.onMessage({ ...baseEventData, matchedQuantity: 10 }, mockMsg);
+    await listener.onMessage(
+      { ...baseEventData, matchedQuantity: 10 },
+      mockMsg,
+    );
 
     expect(prismaMock.order.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -139,7 +143,10 @@ describe("PaymentFailureExpirationCompleteListener", () => {
       status: OrderStatus.PARTIAL_FILLED,
     });
 
-    await listener.onMessage({ ...baseEventData, matchedQuantity: 10 }, mockMsg);
+    await listener.onMessage(
+      { ...baseEventData, matchedQuantity: 10 },
+      mockMsg,
+    );
 
     expect(prismaMock.order.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -166,7 +173,7 @@ describe("PaymentFailureExpirationCompleteListener", () => {
       }),
     );
     // cnt must be incremented to 3 in the published event
-    expect((natsWrapper.client.publish as jest.Mock)).toHaveBeenCalled();
+    expect(natsWrapper.client.publish as jest.Mock).toHaveBeenCalled();
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
   });
 
@@ -181,7 +188,10 @@ describe("PaymentFailureExpirationCompleteListener", () => {
       status: OrderStatus.PARTIAL_FILLED_PAYMENT_FAILURE,
     });
 
-    await listener.onMessage({ ...baseEventData, matchedQuantity: 10 }, mockMsg);
+    await listener.onMessage(
+      { ...baseEventData, matchedQuantity: 10 },
+      mockMsg,
+    );
 
     expect(prismaMock.order.update).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -33,14 +33,14 @@ export class OrderCancelledListener extends Listener<TradeOrderCancelledEvent> {
 
     const finalStatus =
       Number(order.matchedQuantity) > 0 ? "PARTIAL_EXPIRED" : "EXPIRED";
-    await prisma.order.update({
-      where: {
-        id: order.id,
-      },
-      data: {
-        status: finalStatus,
-      },
+    const occResult = await prisma.order.updateMany({
+      where: { id: order.id, version: order.version },
+      data: { status: finalStatus, version: { increment: 1 } },
     });
+    if (occResult.count === 0) {
+      msg.ack();
+      return;
+    }
     const { data: settleData, status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
       "patch",
@@ -65,7 +65,7 @@ export class OrderCancelledListener extends Listener<TradeOrderCancelledEvent> {
 
 const callService = async (url: string, method: string, payload: any) => {
   try {
-    const response = await axios({ method, url, data: payload });
+    const response = await axios({ method, url, data: payload, timeout: 5000 });
     return { data: response.data, status: response.status };
   } catch (error: any) {
     return {

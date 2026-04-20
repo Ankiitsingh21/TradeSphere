@@ -27,20 +27,20 @@ export const seed = async (index: string) => {
 
   const find = await prisma.stock.findMany();
 
-//   const eventStocks = find.map((s) => ({
-//   id: s.id,
-//   symbol: s.symbol,
-//   price: s.price.toNumber(),          
-//   version: s.version,
-//   createdAt: s.createdAt.toISOString(), 
-//   updatedAt: s.updatedAt.toISOString(),
-// }));
+  //   const eventStocks = find.map((s) => ({
+  //   id: s.id,
+  //   symbol: s.symbol,
+  //   price: s.price.toNumber(),
+  //   version: s.version,
+  //   createdAt: s.createdAt.toISOString(),
+  //   updatedAt: s.updatedAt.toISOString(),
+  // }));
 
   // console.log(find);
 
   await new SeedPublisher(natsWrapper.client).publish({
-    stocks:find
-  })
+    stocks: find,
+  });
 
   return db;
 };
