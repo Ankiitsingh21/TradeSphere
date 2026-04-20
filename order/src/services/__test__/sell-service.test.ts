@@ -22,14 +22,17 @@ import {
 } from "../../../src/generated/prisma/client";
 
 const mockOrder = {
-  id: "order-1",
-  userId: "user-1",
-  symbol: "RELIANCE",
-  type: OrderType.SELL,
-  status: OrderStatus.CREATED,
-  quantity: new Prisma.Decimal(5),
-  resolved: null,
-  price: new Prisma.Decimal(2000),
+  id: 'some-id',
+  userId: 'user-id',
+  symbol: 'TATA',
+  type: OrderType.BUY,       
+  status: OrderStatus.CREATED, 
+  totalQuantity: new Prisma.Decimal(10),
+  matchedQuantity: new Prisma.Decimal(0),
+  price: new Prisma.Decimal(100),
+  resolved: new Prisma.Decimal(0),
+  expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  version: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

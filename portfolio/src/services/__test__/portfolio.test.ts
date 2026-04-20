@@ -13,12 +13,13 @@ import { BadRequestError } from "@showsphere/common";
 import { Prisma } from "../../generated/prisma/client";
 
 const mockPortfolio = {
-  id: "p-1",
-  userId: "user-1",
-  symbol: "RELIANCE",
-  avgBuyPrice: new Prisma.Decimal(2000),
-  quantity: new Prisma.Decimal(5),
-  totalInvested: new Prisma.Decimal(10000),
+  id: 'some-id',
+  userId: 'user-id',
+  symbol: 'TATA',
+  avgBuyPrice: new Prisma.Decimal(100),
+  quantity: new Prisma.Decimal(10),
+  totalInvested: new Prisma.Decimal(1000),
+  version: 0, 
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -33,7 +34,7 @@ describe("Portfolio buy service", () => {
     prismaMock.portfolio.findUnique.mockResolvedValue(null);
     prismaMock.portfolio.create.mockResolvedValue(mockPortfolio);
 
-    await buy("user-1", "RELIANCE", 2000, 5);
+    await buy("user-1", "TATA", 2000, 5);
 
     expect(prismaMock.portfolio.create).toHaveBeenCalled();
   });
@@ -54,13 +55,13 @@ describe("Portfolio buy service", () => {
       avgBuyPrice: new Prisma.Decimal(1983),
     });
 
-    await buy("user-1", "RELIANCE", 1950, 5);
+    await buy("user-1", "TATA", 1950, 5);
 
     expect(prismaMock.portfolio.update).toHaveBeenCalled();
   });
 
   it("should throw if quantity is 0 or negative", async () => {
-    await expect(buy("user-1", "RELIANCE", 2000, 0)).rejects.toThrow(
+    await expect(buy("user-1", "TATA", 2000, 0)).rejects.toThrow(
       BadRequestError,
     );
   });
@@ -84,7 +85,7 @@ describe("Portfolio sell service", () => {
       quantity: new Prisma.Decimal(3),
     });
 
-    await sell("user-1", "RELIANCE", 2000, 2);
+    await sell("user-1", "TATA", 2000, 2);
 
     expect(prismaMock.portfolio.update).toHaveBeenCalled();
   });
@@ -102,7 +103,7 @@ describe("Portfolio sell service", () => {
 
     prismaMock.portfolio.delete.mockResolvedValue(existing);
 
-    const result = await sell("user-1", "RELIANCE", 2000, 5);
+    const result = await sell("user-1", "TATA", 2000, 5);
 
     expect(prismaMock.portfolio.delete).toHaveBeenCalled();
     expect(result.message).toBe("Position closed");
@@ -119,7 +120,7 @@ describe("Portfolio sell service", () => {
     );
     prismaMock.portfolio.findUnique.mockResolvedValue(existing);
 
-    await expect(sell("user-1", "RELIANCE", 2000, 100)).rejects.toThrow(
+    await expect(sell("user-1", "TATA", 2000, 100)).rejects.toThrow(
       BadRequestError,
     );
   });
@@ -130,7 +131,7 @@ describe("Portfolio sell service", () => {
     );
     prismaMock.portfolio.findUnique.mockResolvedValue(null);
 
-    await expect(sell("user-1", "RELIANCE", 2000, 5)).rejects.toThrow(
+    await expect(sell("user-1", "TATA", 2000, 5)).rejects.toThrow(
       BadRequestError,
     );
   });
@@ -140,15 +141,15 @@ describe("Portfolio verify service", () => {
   it("should return stock if user owns it", async () => {
     prismaMock.portfolio.findUnique.mockResolvedValue(mockPortfolio);
 
-    const result = await verifyy("user-1", "RELIANCE");
+    const result = await verifyy("user-1", "TATA");
 
-    expect(result.symbol).toBe("RELIANCE");
+    expect(result.symbol).toBe("TATA");
   });
 
   it("should throw if stock not owned", async () => {
     prismaMock.portfolio.findUnique.mockResolvedValue(null);
 
-    await expect(verifyy("user-1", "RELIANCE")).rejects.toThrow(
+    await expect(verifyy("user-1", "TATA")).rejects.toThrow(
       BadRequestError,
     );
   });

@@ -15,17 +15,21 @@ const mockedAxios = axios as jest.MockedFunction<typeof axios>;
 import { buy } from "../../services/buy-service";
 import { BadRequestError } from "@showsphere/common";
 
-import { Prisma, OrderType, OrderStatus } from "../../generated/prisma/client";
+import { Prisma, OrderStatus, OrderType } from "../../generated/prisma/client";
 
 const mockOrder = {
-  id: "order-1",
-  userId: "user-1",
-  symbol: "RELIANCE",
-  type: OrderType.BUY,
-  status: OrderStatus.CREATED,
-  quantity: new Prisma.Decimal(5),
-  resolved: null,
-  price: new Prisma.Decimal(2000),
+  id: 'some-id',
+  userId: 'user-id',
+  symbol: 'TATA',
+  // Use the Prisma enums directly:
+  type: OrderType.BUY,       // or 'BUY' as OrderType
+  status: OrderStatus.CREATED, // or 'CREATED' as OrderStatus
+  totalQuantity: new Prisma.Decimal(10),
+  matchedQuantity: new Prisma.Decimal(0),
+  price: new Prisma.Decimal(100),
+  resolved: new Prisma.Decimal(0),
+  expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  version: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
