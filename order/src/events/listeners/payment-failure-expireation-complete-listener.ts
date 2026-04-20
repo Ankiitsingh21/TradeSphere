@@ -31,6 +31,11 @@ export class PaymentFailureExpirationCompleteListener extends Listener<PaymentFa
       msg.ack();
       return;
     }
+    if (order.status === "EXPIRED" || order.status === "PARTIAL_EXPIRED") {
+      msg.ack();
+      return;
+    }
+    
 
     if (data.cnt > 3) {
       for (let i = 0; i < 5; i++) {

@@ -26,6 +26,11 @@ export class OrderCancelledListener extends Listener<TradeOrderCancelledEvent> {
       return;
     }
 
+    if (order.status === "EXPIRED" || order.status === "PARTIAL_EXPIRED") {
+      msg.ack();
+      return;
+    }
+
     const finalStatus =
       Number(order.matchedQuantity) > 0 ? "PARTIAL_EXPIRED" : "EXPIRED";
     await prisma.order.update({

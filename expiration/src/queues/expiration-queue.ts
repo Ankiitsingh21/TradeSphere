@@ -27,7 +27,7 @@ const expirationQueue = new Queue<Payload>("order:expiration", {
 });
 
 expirationQueue.process(async (job) => {
-  new ExpirationCompletePublisher(natsWrapper.client).publish({
+  await new ExpirationCompletePublisher(natsWrapper.client).publish({
     orderId: job.data.orderId,
   });
 });
@@ -39,7 +39,7 @@ const expirationQueuee = new Queue<Payload1>("paymentfailure:expiration", {
 });
 
 expirationQueuee.process(async (job) => {
-  new PaymentFailureExpirationPublisher(natsWrapper.client).publish({
+  await new PaymentFailureExpirationPublisher(natsWrapper.client).publish({
     orderId: job.data.orderId,
     expiresAt: job.data.expiresAt,
     cnt: job.data.cnt,
@@ -68,7 +68,7 @@ const expirationQueueee = new Queue<payload2>("Sellpaymentfailure:expiration", {
 });
 
 expirationQueueee.process(async (job) => {
-  new SellPaymentFailureCompletePublisher(natsWrapper.client).publish({
+  await new SellPaymentFailureCompletePublisher(natsWrapper.client).publish({
     orderId: job.data.orderId,
     expiresAt: job.data.expiresAt,
     cnt: job.data.cnt,

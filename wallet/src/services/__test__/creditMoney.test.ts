@@ -40,7 +40,7 @@ describe("creditMoney service", () => {
 
     const result = await credit("user-1", 5000);
     expect(result.tranc.type).toBe("CREDIT");
-    expect(result.update.available_balance).toBe(5000);
+    expect(result.update!.available_balance).toBe(5000);
   });
 
   it("should throw if wallet not found", async () => {

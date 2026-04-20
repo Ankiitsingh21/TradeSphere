@@ -1,3 +1,5 @@
+// tests/services/lockMoney.test.ts
+
 import { prismaMock } from "../../__mocks__/prisma";
 
 jest.mock("../../config/db", () => {
@@ -20,18 +22,26 @@ describe("lockMoney service", () => {
     updatedAt: new Date(),
   };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    // default transaction mock
+    prismaMock.$transaction.mockImplementation(async (fn: any) =>
+      fn(prismaMock)
+    );
+  });
 
   it("should lock money successfully when balance is sufficient", async () => {
-    prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock),
-    );
-    prismaMock.wallet.findUnique.mockResolvedValue(mockWallet);
-    prismaMock.wallet.update.mockResolvedValue({
-      ...mockWallet,
-      available_balance: 700 as any,
-      locked_balance: 300 as any,
-    });
+    prismaMock.wallet.findUnique
+      .mockResolvedValueOnce(mockWallet) // read
+      .mockResolvedValueOnce({
+        ...mockWallet,
+        available_balance: 700 as any,
+        locked_balance: 300 as any,
+      }); 
+
+    prismaMock.wallet.updateMany.mockResolvedValue({ count: 1 });
+
     prismaMock.transactions.create.mockResolvedValue({
       id: "txn-1",
       type: "LOCK",
@@ -39,39 +49,35 @@ describe("lockMoney service", () => {
     } as any);
 
     const result = await lockmoney("user-1", 300);
+
     expect(result.tranc.type).toBe("LOCK");
-    expect(result.update.available_balance).toBe(700);
-    expect(result.update.locked_balance).toBe(300);
+    expect(result.update!.available_balance).toBe(700);
+    expect(result.update!.locked_balance).toBe(300);
   });
 
   it("should throw if available balance is insufficient", async () => {
-    prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock),
-    );
     prismaMock.wallet.findUnique.mockResolvedValue(mockWallet);
 
     await expect(lockmoney("user-1", 5000)).rejects.toThrow(BadRequestError);
   });
 
   it("should throw if wallet not found", async () => {
-    prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock),
-    );
     prismaMock.wallet.findUnique.mockResolvedValue(null);
 
     await expect(lockmoney("user-1", 300)).rejects.toThrow(BadRequestError);
   });
 
-  it("should not allow locking exact balance (leaves 0 available)", async () => {
-    prismaMock.$transaction.mockImplementation(async (fn: any) =>
-      fn(prismaMock),
-    );
-    prismaMock.wallet.findUnique.mockResolvedValue(mockWallet);
-    prismaMock.wallet.update.mockResolvedValue({
-      ...mockWallet,
-      available_balance: 0 as any,
-      locked_balance: 1000 as any,
-    });
+  it("should allow locking full balance (available becomes 0)", async () => {
+    prismaMock.wallet.findUnique
+      .mockResolvedValueOnce(mockWallet)
+      .mockResolvedValueOnce({
+        ...mockWallet,
+        available_balance: 0 as any,
+        locked_balance: 1000 as any,
+      });
+
+    prismaMock.wallet.updateMany.mockResolvedValue({ count: 1 });
+
     prismaMock.transactions.create.mockResolvedValue({
       id: "txn-1",
       type: "LOCK",
@@ -79,6 +85,7 @@ describe("lockMoney service", () => {
     } as any);
 
     const result = await lockmoney("user-1", 1000);
+
     expect(result.update.available_balance).toBe(0);
     expect(result.update.locked_balance).toBe(1000);
   });

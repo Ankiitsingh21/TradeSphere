@@ -35,7 +35,16 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
         return;
       }
 
-      if (order.status === "SUCCESS") {
+      const NON_PROCESSABLE = [
+        "SUCCESS",
+        "PARTIAL_FILLED",
+        "FAILED",
+        "EXPIRED",
+        "PARTIAL_EXPIRED",
+        "PAYMENT_FAILURE",
+        "PARTIAL_FILLED_PAYMENT_FAILURE",
+      ];
+      if (NON_PROCESSABLE.includes(order.status)) {               
         msg.ack();
         return;
       }

@@ -42,7 +42,7 @@ describe("addMoney service", () => {
     } as any);
 
     const result = await addmoney("user-1", 500);
-    expect(result.addmoney.total_balance).toBe(1500);
+    expect(result.addmoney!.total_balance).toBe(1500);
     expect(result.createtransactions.type).toBe("ADD");
   });
 
