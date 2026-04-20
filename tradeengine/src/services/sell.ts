@@ -74,8 +74,8 @@ export const sell = async (
     }
 
     const tradePrice = buyer.price;
-    // Buyer locked at buyer.price, trades at sellPrice — difference is refunded
-    const buyerReleaseAmount = buyer.price.minus(sellPrice);
+    // Buyer locked at buyer.price, trades at sellPrice — difference is refunded (per unit)
+    const buyerReleaseAmountPerUnit = buyer.price.minus(sellPrice);
 
     if (remainingQty.equals(buyer.quantity)) {
       // Exact match — buyer fully consumed
@@ -97,7 +97,7 @@ export const sell = async (
         matchedQty: buyer.quantity,
         tradePrice: sellPrice, // trade happens at seller's ask price
         type: TradeType.Buy,
-        releaseAmount: buyerReleaseAmount.mul(buyer.quantity),
+        releaseAmount: buyerReleaseAmountPerUnit.mul(buyer.quantity),
       });
     } else if (remainingQty.greaterThan(buyer.quantity)) {
       // Buyer fully consumed, seller still has remaining
@@ -119,26 +119,30 @@ export const sell = async (
         matchedQty: buyer.quantity,
         tradePrice: sellPrice,
         type: TradeType.Buy,
-        releaseAmount: buyerReleaseAmount.mul(buyer.quantity),
+        releaseAmount: buyerReleaseAmountPerUnit.mul(buyer.quantity),
       });
     } else {
       // Seller fully consumed, buyer partially consumed — buyer stays in queue
-      const remaining = buyer.quantity.minus(remainingQty);
+      // matched quantity for this buyer in this round is remainingQty (NOT buyer.quantity)
+      const matchedForBuyer = remainingQty;
+      const remaining = buyer.quantity.minus(matchedForBuyer);
 
       await prisma.orderBook.update({
         where: { id: buyer.id },
-        data: { matchedQuantity: remainingQty },
+        data: { matchedQuantity: matchedForBuyer },
       });
       book.buyHeap.dequeue();
 
       const updatedBuyer: OrderNode = { ...buyer, quantity: remaining };
       book.buyHeap.enqueue(updatedBuyer);
 
-      totalMatchedQty = totalMatchedQty.plus(remainingQty);
+      totalMatchedQty = totalMatchedQty.plus(matchedForBuyer);
       lastTradePrice = tradePrice;
       remainingQty = new Prisma.Decimal(0);
 
       // Buyer is NOT fully done — no TradeExecuted yet, they stay PENDING
+      // If a TradeExecuted were published here, releaseAmount must use matchedForBuyer (remainingQty),
+      // not buyer.quantity (original), to avoid over-refunding the locked amount.
     }
   }
 

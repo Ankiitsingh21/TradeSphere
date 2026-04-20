@@ -64,12 +64,24 @@ router.patch(
   "/settle-money",
   [
     body("settleamount")
-      .notEmpty()
-      .withMessage("settleamount must be positive"),
+      .isNumeric()
+      .withMessage("settleamount must be a number"),
     body("releaseamount")
-    .notEmpty()
-      .withMessage("releaseamount must be a number >= 0"),
+      .isNumeric()
+      .withMessage("releaseamount must be a number"),
     body("userID").notEmpty().withMessage("user ID must be present"),
+    // Fix: prevent no-op settle calls that create useless transaction records
+    body().custom((_, { req }) => {
+      const settle = parseFloat(req.body.settleamount);
+      const release = parseFloat(req.body.releaseamount);
+      if (isNaN(settle) || isNaN(release)) return true; 
+      if (settle + release <= 0) {
+        throw new Error(
+          "settleamount + releaseamount must be greater than 0",
+        );
+      }
+      return true;
+    }),
   ],
   validateRequest,
   settleMoney,

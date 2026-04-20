@@ -5,6 +5,7 @@ import { SellTradePublisher } from "../events/publishers/sell-trade-event";
 import { natsWrapper } from "../natswrapper";
 import { TradeOrderCreated } from "../events/publishers/trade-order-created-event";
 import { SellPaymentFailurePublisher } from "../events/publishers/sellPaymentFailurePublisher";
+import { Prisma } from "../generated/prisma/client";
 
 const EXPRIATION_WINDOW_SECOND = 10;
 
@@ -96,8 +97,9 @@ export const sell = async (
   }
 
   if (matchedData.data.status === "PARTIAL") {
-    const creditAmount =
-      Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
+    const tradePriceD = new Prisma.Decimal(matchedData.data.tradePrice);
+    const matchedQtyD = new Prisma.Decimal(matchedData.data.matchedQty);
+    const creditAmountD = tradePriceD.mul(matchedQtyD);
 
     const expiration = new Date();
     expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
@@ -110,15 +112,15 @@ export const sell = async (
     await new SellTradePublisher(natsWrapper.client).publish({
       userId: order.userId,
       symbol: symbol,
-      price: matchedData.data.tradePrice,
+      price: tradePriceD,
       type: TradeType.Sell,
-      quantity: matchedData.data.matchedQty,
+      quantity: matchedQtyD,
     });
 
     const { status: creditStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
-      { amount: creditAmount, userID: order.userId },
+      { amount: creditAmountD.toNumber(), userID: order.userId },
     );
 
     if (!creditStatus || creditStatus !== 201) {
@@ -132,8 +134,8 @@ export const sell = async (
         },
         data: {
           status: "PARTIAL_FILLED_PAYMENT_FAILURE",
-          resolved: creditAmount,
-          matchedQuantity: matchedData.data.matchedQty,
+          resolved: creditAmountD.toNumber(),
+          matchedQuantity: matchedQtyD.toNumber(),
           expiresAt: expiration,
         },
       });
@@ -141,7 +143,7 @@ export const sell = async (
       await new SellPaymentFailurePublisher(natsWrapper.client).publish({
         orderId: order.id,
         expiresAt: expiration!.toISOString(),
-        amount: creditAmount,
+        amount: creditAmountD.toNumber(),
         cnt: cnt,
         userId: update.userId,
         status: update.status,
@@ -154,8 +156,8 @@ export const sell = async (
       where: { id: order.id },
       data: {
         status: "PARTIAL_FILLED",
-        resolved: creditAmount,
-        matchedQuantity: matchedData.data.matchedQty,
+        resolved: creditAmountD.toNumber(),
+        matchedQuantity: matchedQtyD.toNumber(),
         expiresAt: expiration,
       },
     });
@@ -164,21 +166,22 @@ export const sell = async (
   }
 
   // MATCHED
-  const creditAmount =
-    Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
+  const tradePriceD = new Prisma.Decimal(matchedData.data.tradePrice);
+  const matchedQtyD = new Prisma.Decimal(matchedData.data.matchedQty);
+  const creditAmountD = tradePriceD.mul(matchedQtyD);
 
   await new SellTradePublisher(natsWrapper.client).publish({
     userId: order.userId,
     symbol: order.symbol,
-    price: matchedData.data.tradePrice,
+    price: tradePriceD,
     type: TradeType.Sell,
-    quantity: matchedData.data.matchedQty,
+    quantity: matchedQtyD,
   });
 
   const { status: creditStatus } = await callService(
     "http://wallet-srv:3000/api/wallet/credit-money",
     "patch",
-    { userID, amount: creditAmount },
+    { userID, amount: creditAmountD.toNumber() },
   );
 
   if (!creditStatus || creditStatus !== 201) {
@@ -192,8 +195,8 @@ export const sell = async (
       },
       data: {
         status: "PAYMENT_FAILURE",
-        resolved: creditAmount,
-        matchedQuantity: matchedData.data.matchedQty,
+        resolved: creditAmountD.toNumber(),
+        matchedQuantity: matchedQtyD.toNumber(),
         expiresAt: expiration,
       },
     });
@@ -201,7 +204,7 @@ export const sell = async (
     await new SellPaymentFailurePublisher(natsWrapper.client).publish({
       orderId: order.id,
       expiresAt: expiration!.toISOString(),
-      amount: creditAmount,
+      amount: creditAmountD.toNumber(),
       cnt: cnt,
       userId: update.userId,
       status: update.status,
@@ -214,8 +217,8 @@ export const sell = async (
     where: { id: order.id },
     data: {
       status: "SUCCESS",
-      resolved: creditAmount,
-      matchedQuantity: matchedData.data.matchedQty,
+      resolved: creditAmountD.toNumber(),
+      matchedQuantity: matchedQtyD.toNumber(),
     },
   });
 
@@ -227,8 +230,6 @@ const callService = async (url: string, method: string, payload: any) => {
     const response = await axios({ method, url, data: payload });
     return { data: response.data, status: response.status };
   } catch (error: any) {
-    // console.log(url);
-    // console.log(error.response?.data);
     return {
       data: error.response?.data,
       status: error.response?.status,

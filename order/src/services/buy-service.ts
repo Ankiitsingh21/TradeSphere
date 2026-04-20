@@ -5,6 +5,7 @@ import { BuyTradePublisher } from "../events/publishers/buy-trade-event";
 import { natsWrapper } from "../natswrapper";
 import { TradeOrderCreated } from "../events/publishers/trade-order-created-event";
 import { PaymentFailurePublisher } from "../events/publishers/payment-failure-publisher";
+import { Prisma } from "../generated/prisma/client";
 
 const EXPRIATION_WINDOW_SECOND = 10;
 
@@ -28,7 +29,9 @@ export const buy = async (
     price = Number(stockprice.data.price);
   }
 
-  const lockamount = price! * quantity;
+  const priceD = new Prisma.Decimal(price!);
+  const quantityD = new Prisma.Decimal(quantity);
+  const lockamountD = priceD.mul(quantityD);
 
   let data, status;
   try {
@@ -37,7 +40,7 @@ export const buy = async (
       url: "http://wallet-srv:3000/api/wallet/lock-money",
       data: {
         userID: userID,
-        amount: lockamount,
+        amount: lockamountD.toNumber(),
       },
     });
     data = response.data;
@@ -87,7 +90,7 @@ export const buy = async (
       "patch",
       {
         settleamount: 0,
-        releaseamount: lockamount,
+        releaseamount: lockamountD.toNumber(),
         userID,
       },
     );
@@ -117,11 +120,12 @@ export const buy = async (
   }
 
   if (matchedData.data.status === "PARTIAL") {
-    const priceDiffSavings = matchedData.data.releaseAmount
-      ? Number(matchedData.data.releaseAmount)
-      : 0;
-    const settleAmount =
-      Number(matchedData.data.tradePrice) * Number(matchedData.data.matchedQty);
+    const tradePriceD = new Prisma.Decimal(matchedData.data.tradePrice);
+    const matchedQtyD = new Prisma.Decimal(matchedData.data.matchedQty);
+    const priceDiffSavingsD = matchedData.data.releaseAmount
+      ? new Prisma.Decimal(matchedData.data.releaseAmount)
+      : new Prisma.Decimal(0);
+    const settleAmountD = tradePriceD.mul(matchedQtyD);
 
     const expiration = new Date();
     expiration.setSeconds(expiration.getSeconds() + EXPRIATION_WINDOW_SECOND);
@@ -131,11 +135,12 @@ export const buy = async (
       expiresAt: expiration!.toISOString(),
     });
 
+    // Fix: use order.userId and symbol (not matchedData fields), pass Decimal-safe price
     new BuyTradePublisher(natsWrapper.client).publish({
-      userId: matchedData.data.userId,
-      symbol: matchedData.data.symbol,
-      price: matchedData.data.tradePrice,
-      quantity: matchedData.data.matchedQty,
+      userId: order.userId,
+      symbol: symbol,
+      price: tradePriceD,
+      quantity: matchedQtyD,
       type: TradeType.Buy,
     });
 
@@ -143,8 +148,8 @@ export const buy = async (
       "http://wallet-srv:3000/api/wallet/settle-money",
       "patch",
       {
-        settleamount: settleAmount,
-        releaseamount: priceDiffSavings,
+        settleamount: settleAmountD.toNumber(),
+        releaseamount: priceDiffSavingsD.toNumber(),
         userID,
       },
     );
@@ -159,8 +164,8 @@ export const buy = async (
           id: order.id,
         },
         data: {
-          resolved: settleAmount,
-          matchedQuantity: matchedData.data.matchedQty,
+          resolved: settleAmountD.toNumber(),
+          matchedQuantity: matchedQtyD.toNumber(),
           expiresAt: expiration,
           status: "PARTIAL_FILLED_PAYMENT_FAILURE",
         },
@@ -168,10 +173,10 @@ export const buy = async (
       await new PaymentFailurePublisher(natsWrapper.client).publish({
         orderId: order.id,
         expiresAt: expiration!.toISOString(),
-        matchedQuantity: matchedData.data.matchedQty,
-        resolved: settleAmount,
-        settleamount: settleAmount,
-        releaseamount: priceDiffSavings,
+        matchedQuantity: matchedQtyD.toNumber(),
+        resolved: settleAmountD.toNumber(),
+        settleamount: settleAmountD.toNumber(),
+        releaseamount: priceDiffSavingsD.toNumber(),
         status: "PARTIAL_FILLED_PAYMENT_FAILURE",
         userId: order.userId,
         cnt: cnt,
@@ -184,8 +189,8 @@ export const buy = async (
       where: { id: order.id },
       data: {
         status: "PARTIAL_FILLED",
-        resolved: settleAmount,
-        matchedQuantity: matchedData.data.matchedQty,
+        resolved: settleAmountD.toNumber(),
+        matchedQuantity: matchedQtyD.toNumber(),
         expiresAt: expiration,
       },
     });
@@ -194,26 +199,18 @@ export const buy = async (
   }
 
   // MATCHED
-  const releaseAmount = matchedData.data.releaseAmount
-    ? Number(matchedData.data.releaseAmount)
-    : 0;
-  const settleAmount = lockamount - releaseAmount;
-  // console.log(typeof(matchedData.data.tradePrice));
-  // console.log(typeof(matchedData.data.matchedQty));
-
-  // new BuyTradePublisher(natsWrapper.client).publish({
-  //   userId: matchedData.data.userId,
-  //   symbol: symbol,
-  //   price: Number(matchedData.data.tradePrice),
-  //   quantity: Number(matchedData.data.matchedQuantity),
-  //   type: TradeType.Buy,
-  // });
+  const tradePriceD = new Prisma.Decimal(matchedData.data.tradePrice);
+  const matchedQtyD = new Prisma.Decimal(matchedData.data.matchedQty);
+  const releaseAmountD = matchedData.data.releaseAmount
+    ? new Prisma.Decimal(matchedData.data.releaseAmount)
+    : new Prisma.Decimal(0);
+  const settleAmountD = lockamountD.minus(releaseAmountD);
 
   new BuyTradePublisher(natsWrapper.client).publish({
     userId: order.userId,
     symbol: symbol,
-    price: matchedData.data.tradePrice,
-    quantity: matchedData.data.matchedQty,
+    price: tradePriceD,
+    quantity: matchedQtyD,
     type: TradeType.Buy,
   });
 
@@ -221,8 +218,8 @@ export const buy = async (
     "http://wallet-srv:3000/api/wallet/settle-money",
     "patch",
     {
-      settleamount: settleAmount,
-      releaseamount: releaseAmount,
+      settleamount: settleAmountD.toNumber(),
+      releaseamount: releaseAmountD.toNumber(),
       userID,
     },
   );
@@ -238,8 +235,8 @@ export const buy = async (
       },
       data: {
         status: "PAYMENT_FAILURE",
-        resolved: settleAmount,
-        matchedQuantity: matchedData.data.matchedQty,
+        resolved: settleAmountD.toNumber(),
+        matchedQuantity: matchedQtyD.toNumber(),
         expiresAt: expiration,
       },
     });
@@ -247,10 +244,10 @@ export const buy = async (
     await new PaymentFailurePublisher(natsWrapper.client).publish({
       orderId: order.id,
       expiresAt: expiration!.toISOString(),
-      matchedQuantity: matchedData.data.matchedQty,
-      resolved: settleAmount,
-      settleamount: settleAmount,
-      releaseamount: releaseAmount,
+      matchedQuantity: matchedQtyD.toNumber(),
+      resolved: settleAmountD.toNumber(),
+      settleamount: settleAmountD.toNumber(),
+      releaseamount: releaseAmountD.toNumber(),
       status: "PAYMENT_FAILURE",
       userId: order.userId,
       cnt: cnt,
@@ -263,8 +260,8 @@ export const buy = async (
     where: { id: order.id },
     data: {
       status: "SUCCESS",
-      resolved: settleAmount,
-      matchedQuantity: matchedData.data.matchedQty,
+      resolved: settleAmountD.toNumber(),
+      matchedQuantity: matchedQtyD.toNumber(),
     },
   });
 

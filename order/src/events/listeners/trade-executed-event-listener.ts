@@ -13,6 +13,7 @@ import { natsWrapper } from "../../natswrapper";
 import { queueGroupName } from "../queueGroupName";
 import { PaymentFailurePublisher } from "../publishers/payment-failure-publisher";
 import { SellPaymentFailurePublisher } from "../publishers/sellPaymentFailurePublisher";
+import { Prisma } from "../../generated/prisma/client";
 
 const EXPRIATION_WINDOW_SECOND = 10;
 
@@ -55,16 +56,21 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
     order: any,
     data: TradeExecutedEvent["data"],
   ) {
-    const lockamount = Number(order.price) * Number(order.totalQuantity);
-    const releaseAmount = data.releaseAmount ? Number(data.releaseAmount) : 0;
-    const settleAmount = lockamount - releaseAmount;
+    // Fix: use Prisma.Decimal to avoid float precision loss on financial amounts
+    const lockamountD = new Prisma.Decimal(order.price).mul(
+      new Prisma.Decimal(order.totalQuantity),
+    );
+    const releaseAmountD = data.releaseAmount
+      ? new Prisma.Decimal(data.releaseAmount)
+      : new Prisma.Decimal(0);
+    const settleAmountD = lockamountD.minus(releaseAmountD);
 
     const { status: settleStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/settle-money",
       "patch",
       {
-        settleamount: settleAmount,
-        releaseamount: releaseAmount,
+        settleamount: settleAmountD.toNumber(),
+        releaseamount: releaseAmountD.toNumber(),
         userID: order.userId,
       },
     );
@@ -79,7 +85,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
         where: { id: order.id },
         data: {
           status: "PAYMENT_FAILURE",
-          resolved: settleAmount,
+          resolved: settleAmountD.toNumber(),
           matchedQuantity: data.matchedQty,
           expiresAt: expiration,
         },
@@ -89,9 +95,9 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
         orderId: order.id,
         expiresAt: expiration.toISOString(),
         matchedQuantity: data.matchedQty,
-        resolved: settleAmount,
-        settleamount: settleAmount,
-        releaseamount: releaseAmount,
+        resolved: settleAmountD.toNumber(),
+        settleamount: settleAmountD.toNumber(),
+        releaseamount: releaseAmountD.toNumber(),
         status: "PAYMENT_FAILURE",
         userId: order.userId,
         cnt,
@@ -105,7 +111,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
       where: { id: order.id },
       data: {
         status: "SUCCESS",
-        resolved: settleAmount,
+        resolved: settleAmountD.toNumber(),
         matchedQuantity: data.matchedQty,
       },
     });
@@ -120,13 +126,16 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
   }
 
   private async handleSellCredit(order: any, data: TradeExecutedEvent["data"]) {
-    const creditAmount = Number(data.tradePrice) * Number(data.matchedQty);
+    // Fix: use Prisma.Decimal to avoid float precision loss
+    const creditAmountD = new Prisma.Decimal(data.tradePrice).mul(
+      new Prisma.Decimal(data.matchedQty),
+    );
 
     const { status: creditStatus } = await callService(
       "http://wallet-srv:3000/api/wallet/credit-money",
       "patch",
       {
-        amount: creditAmount,
+        amount: creditAmountD.toNumber(),
         userID: order.userId,
       },
     );
@@ -141,7 +150,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
         where: { id: order.id },
         data: {
           status: "PAYMENT_FAILURE",
-          resolved: creditAmount,
+          resolved: creditAmountD.toNumber(),
           matchedQuantity: data.matchedQty,
           expiresAt: expiration,
         },
@@ -150,7 +159,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
       await new SellPaymentFailurePublisher(natsWrapper.client).publish({
         orderId: order.id,
         expiresAt: expiration.toISOString(),
-        amount: creditAmount,
+        amount: creditAmountD.toNumber(),
         userId: order.userId,
         status: "PAYMENT_FAILURE",
         cnt,
@@ -164,7 +173,7 @@ export class TradeExecutedListener extends Listener<TradeExecutedEvent> {
       where: { id: order.id },
       data: {
         status: "SUCCESS",
-        resolved: creditAmount,
+        resolved: creditAmountD.toNumber(),
         matchedQuantity: data.matchedQty,
       },
     });
