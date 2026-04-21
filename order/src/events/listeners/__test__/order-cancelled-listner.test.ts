@@ -99,8 +99,6 @@ describe("OrderCancelledListener", () => {
       ...pendingOrder,
       matchedQuantity: null,
     });
-    
-    // Prisma's updateMany returns a BatchPayload ({ count: number })
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
@@ -109,8 +107,11 @@ describe("OrderCancelledListener", () => {
       mockMsg,
     );
 
+    // The listener includes `version: { increment: 1 }` in data — use objectContaining
     expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: "EXPIRED" } }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "EXPIRED" }),
+      }),
     );
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
   });
@@ -120,8 +121,6 @@ describe("OrderCancelledListener", () => {
       ...pendingOrder,
       matchedQuantity: new Prisma.Decimal(0),
     });
-    
-    // Prisma's updateMany returns a BatchPayload ({ count: number })
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
@@ -131,7 +130,9 @@ describe("OrderCancelledListener", () => {
     );
 
     expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: "EXPIRED" } }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "EXPIRED" }),
+      }),
     );
   });
 
@@ -140,8 +141,6 @@ describe("OrderCancelledListener", () => {
       ...pendingOrder,
       matchedQuantity: new Prisma.Decimal(5),
     });
-    
-    // Prisma's updateMany returns a BatchPayload ({ count: number })
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
@@ -151,16 +150,50 @@ describe("OrderCancelledListener", () => {
     );
 
     expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: "PARTIAL_EXPIRED" } }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "PARTIAL_EXPIRED" }),
+      }),
     );
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
+  });
+
+  // ─── OCC version check ────────────────────────────────────────────────────
+  it("should include version in the where clause for optimistic concurrency", async () => {
+    prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+    mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 20000 },
+      mockMsg,
+    );
+
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ version: 0 }),
+        data: expect.objectContaining({ version: { increment: 1 } }),
+      }),
+    );
+  });
+
+  it("should ack and return early when OCC version conflict (count=0)", async () => {
+    prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
+    // Simulate concurrent update — this instance lost the race
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+
+    await listener.onMessage(
+      { orderId: "order-1", releaseAmount: 20000 },
+      mockMsg,
+    );
+
+    // ack called (message consumed), wallet NOT called
+    expect(mockMsg.ack).toHaveBeenCalledTimes(1);
+    expect(mockedAxios).not.toHaveBeenCalled();
   });
 
   // ─── Wallet settle call ────────────────────────────────────────────────────
   it("should call settle-money with settleamount=0 and correct releaseAmount and userID", async () => {
     prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
-    
-    // Prisma's updateMany returns a BatchPayload ({ count: number })
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
@@ -183,7 +216,6 @@ describe("OrderCancelledListener", () => {
 
   it("should ack even when settle-money returns 500 (log and move on)", async () => {
     prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
-    
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
 

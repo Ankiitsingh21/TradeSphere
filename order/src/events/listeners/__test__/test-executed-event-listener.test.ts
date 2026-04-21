@@ -74,7 +74,7 @@ describe("TradeExecutedListener", () => {
       await listener.onMessage(buyEventData, mockMsg);
 
       expect(mockMsg.ack).toHaveBeenCalledTimes(1);
-      expect(prismaMock.order.update).not.toHaveBeenCalled();
+      expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
       expect(mockedAxios).not.toHaveBeenCalled();
     });
   });
@@ -122,7 +122,7 @@ describe("TradeExecutedListener", () => {
 
         expect(mockMsg.ack).toHaveBeenCalledTimes(1);
         expect(mockedAxios).not.toHaveBeenCalled();
-        expect(prismaMock.order.update).not.toHaveBeenCalled();
+        expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
       });
     });
   });
@@ -135,13 +135,8 @@ describe("TradeExecutedListener", () => {
         data: { success: true },
         status: 201,
       });
-      prismaMock.order.update.mockResolvedValue({
-        ...basePendingOrder,
-        status: OrderStatus.SUCCESS,
-        userId: "user-1",
-        symbol: "RELIANCE",
-        price: new Prisma.Decimal(2000),
-      });
+      // Listener uses updateMany (OCC) — mock the correct method
+      prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
       await listener.onMessage(buyEventData, mockMsg);
 
@@ -155,7 +150,7 @@ describe("TradeExecutedListener", () => {
           }),
         }),
       );
-      expect(prismaMock.order.update).toHaveBeenCalledWith(
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: "SUCCESS" }),
         }),
@@ -168,14 +163,11 @@ describe("TradeExecutedListener", () => {
     it("should update order to PAYMENT_FAILURE and publish PaymentFailure when settle returns 500", async () => {
       prismaMock.order.findUnique.mockResolvedValue(basePendingOrder);
       mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
-      prismaMock.order.update.mockResolvedValue({
-        ...basePendingOrder,
-        status: OrderStatus.PAYMENT_FAILURE,
-      });
+      prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
       await listener.onMessage(buyEventData, mockMsg);
 
-      expect(prismaMock.order.update).toHaveBeenCalledWith(
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: "PAYMENT_FAILURE" }),
         }),
@@ -190,13 +182,7 @@ describe("TradeExecutedListener", () => {
         data: { success: true },
         status: 201,
       });
-      prismaMock.order.update.mockResolvedValue({
-        ...basePendingOrder,
-        status: OrderStatus.SUCCESS,
-        userId: "user-1",
-        symbol: "RELIANCE",
-        price: new Prisma.Decimal(2000),
-      });
+      prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
       await listener.onMessage(
         { ...buyEventData, releaseAmount: undefined } as any,
@@ -218,13 +204,7 @@ describe("TradeExecutedListener", () => {
         data: { success: true },
         status: 201,
       });
-      prismaMock.order.update.mockResolvedValue({
-        ...basePendingOrder,
-        status: OrderStatus.SUCCESS,
-        userId: "user-1",
-        symbol: "RELIANCE",
-        price: new Prisma.Decimal(2000),
-      });
+      prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
       await listener.onMessage(
         { ...buyEventData, releaseAmount: 500 },
@@ -240,6 +220,21 @@ describe("TradeExecutedListener", () => {
         }),
       );
     });
+
+    it("should ack even when OCC version conflict occurs (count=0 → silent return)", async () => {
+      prismaMock.order.findUnique.mockResolvedValue(basePendingOrder);
+      mockedAxios.mockResolvedValueOnce({
+        data: { success: true },
+        status: 201,
+      });
+      // Simulate another instance already updated this order
+      prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+
+      await listener.onMessage(buyEventData, mockMsg);
+
+      // msg.ack is called inside onMessage AFTER handleBuySettlement returns
+      expect(mockMsg.ack).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ─── SELL credit ───────────────────────────────────────────────────────────
@@ -253,14 +248,7 @@ describe("TradeExecutedListener", () => {
         data: { success: true },
         status: 201,
       });
-      prismaMock.order.update.mockResolvedValue({
-        ...basePendingOrder,
-        type: OrderType.SELL,
-        status: OrderStatus.SUCCESS,
-        userId: "user-1",
-        symbol: "RELIANCE",
-        price: new Prisma.Decimal(2000),
-      });
+      prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
       await listener.onMessage(sellEventData, mockMsg);
 
@@ -273,7 +261,7 @@ describe("TradeExecutedListener", () => {
           }),
         }),
       );
-      expect(prismaMock.order.update).toHaveBeenCalledWith(
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: "SUCCESS" }),
         }),
@@ -288,16 +276,11 @@ describe("TradeExecutedListener", () => {
         type: OrderType.SELL,
       });
       mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
-      prismaMock.order.update.mockResolvedValue({
-        ...basePendingOrder,
-        type: OrderType.SELL,
-        status: OrderStatus.PAYMENT_FAILURE,
-        userId: "user-1",
-      });
+      prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
       await listener.onMessage(sellEventData, mockMsg);
 
-      expect(prismaMock.order.update).toHaveBeenCalledWith(
+      expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: "PAYMENT_FAILURE" }),
         }),
@@ -315,14 +298,7 @@ describe("TradeExecutedListener", () => {
         data: { success: true },
         status: 201,
       });
-      prismaMock.order.update.mockResolvedValue({
-        ...basePendingOrder,
-        type: OrderType.SELL,
-        status: OrderStatus.SUCCESS,
-        userId: "user-1",
-        symbol: "RELIANCE",
-        price: new Prisma.Decimal(2000),
-      });
+      prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
       // tradePrice=2000, matchedQty=5 → credit=10000
       await listener.onMessage(

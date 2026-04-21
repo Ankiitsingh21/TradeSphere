@@ -99,7 +99,7 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
     await listener.onMessage({ ...baseEventData, cnt: 4 }, mockMsg);
 
     expect(mockedAxios).not.toHaveBeenCalled();
-    expect(prismaMock.order.update).not.toHaveBeenCalled();
+    expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
   });
 
@@ -107,10 +107,8 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
   it("should update order to SUCCESS when credit succeeds with PAYMENT_FAILURE status", async () => {
     prismaMock.order.findUnique.mockResolvedValue(baseOrder);
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
-    prismaMock.order.update.mockResolvedValue({
-      ...baseOrder,
-      status: OrderStatus.SUCCESS,
-    });
+    // Listener uses updateMany (OCC) — mock the correct method
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     await listener.onMessage(
       { ...baseEventData, status: "PAYMENT_FAILURE" },
@@ -123,7 +121,7 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
         data: expect.objectContaining({ amount: 10000, userID: "user-1" }),
       }),
     );
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "SUCCESS" }),
       }),
@@ -137,17 +135,14 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
       status: OrderStatus.PARTIAL_FILLED_PAYMENT_FAILURE,
     });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
-    prismaMock.order.update.mockResolvedValue({
-      ...baseOrder,
-      status: OrderStatus.PARTIAL_FILLED,
-    });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     await listener.onMessage(
       { ...baseEventData, status: "PARTIAL_FILLED_PAYMENT_FAILURE" },
       mockMsg,
     );
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "PARTIAL_FILLED" }),
       }),
@@ -159,15 +154,11 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
   it("should increment cnt and re-publish SellPaymentFailure when credit fails with cnt < 3", async () => {
     prismaMock.order.findUnique.mockResolvedValue(baseOrder);
     mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
-    prismaMock.order.update.mockResolvedValue({
-      ...baseOrder,
-      status: OrderStatus.PAYMENT_FAILURE,
-      userId: "user-1",
-    });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     await listener.onMessage({ ...baseEventData, cnt: 2 }, mockMsg);
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "PAYMENT_FAILURE" }),
       }),
@@ -182,18 +173,14 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
       status: OrderStatus.PARTIAL_FILLED_PAYMENT_FAILURE,
     });
     mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
-    prismaMock.order.update.mockResolvedValue({
-      ...baseOrder,
-      status: OrderStatus.PARTIAL_FILLED_PAYMENT_FAILURE,
-      userId: "user-1",
-    });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     await listener.onMessage(
       { ...baseEventData, status: "PARTIAL_FILLED_PAYMENT_FAILURE", cnt: 1 },
       mockMsg,
     );
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: "PARTIAL_FILLED_PAYMENT_FAILURE",
@@ -201,5 +188,32 @@ describe("SellPaymentFailureExpirationcompleteListener", () => {
       }),
     );
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
+  });
+
+  // ─── OCC version check ────────────────────────────────────────────────────
+  it("should include version in where clause for optimistic concurrency", async () => {
+    prismaMock.order.findUnique.mockResolvedValue(baseOrder);
+    mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+
+    await listener.onMessage(baseEventData, mockMsg);
+
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "order-1", version: 0 }),
+        data: expect.objectContaining({ version: { increment: 1 } }),
+      }),
+    );
+  });
+
+  it("should ack and return early on OCC version conflict (count=0)", async () => {
+    prismaMock.order.findUnique.mockResolvedValue(baseOrder);
+    mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+
+    await listener.onMessage(baseEventData, mockMsg);
+
+    expect(mockMsg.ack).toHaveBeenCalledTimes(1);
+    expect(natsWrapper.client.publish as jest.Mock).not.toHaveBeenCalled();
   });
 });

@@ -102,8 +102,16 @@ describe("PaymentFailureExpirationCompleteListener", () => {
     await listener.onMessage({ ...baseEventData, cnt: 4 }, mockMsg);
 
     expect(mockedAxios).not.toHaveBeenCalled();
-    expect(prismaMock.order.update).not.toHaveBeenCalled();
+    expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     expect(natsWrapper.client.publish as jest.Mock).not.toHaveBeenCalled();
+    expect(mockMsg.ack).toHaveBeenCalledTimes(1);
+  });
+
+  it("should still ack even after cnt=3 exhaustion (admin-log path)", async () => {
+    prismaMock.order.findUnique.mockResolvedValue(paymentFailureOrder);
+
+    await listener.onMessage({ ...baseEventData, cnt: 4 }, mockMsg);
+
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
   });
 
@@ -114,17 +122,15 @@ describe("PaymentFailureExpirationCompleteListener", () => {
       totalQuantity: new Prisma.Decimal(10),
     });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
-    prismaMock.order.update.mockResolvedValue({
-      ...paymentFailureOrder,
-      status: OrderStatus.SUCCESS,
-    });
+    // Listener uses updateMany (OCC) — mock the correct method
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     await listener.onMessage(
       { ...baseEventData, matchedQuantity: 10 },
       mockMsg,
     );
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "SUCCESS" }),
       }),
@@ -138,17 +144,14 @@ describe("PaymentFailureExpirationCompleteListener", () => {
       totalQuantity: new Prisma.Decimal(20),
     });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
-    prismaMock.order.update.mockResolvedValue({
-      ...paymentFailureOrder,
-      status: OrderStatus.PARTIAL_FILLED,
-    });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     await listener.onMessage(
       { ...baseEventData, matchedQuantity: 10 },
       mockMsg,
     );
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "PARTIAL_FILLED" }),
       }),
@@ -160,14 +163,11 @@ describe("PaymentFailureExpirationCompleteListener", () => {
   it("should increment cnt and re-publish PaymentFailure when settle fails and cnt < 3", async () => {
     prismaMock.order.findUnique.mockResolvedValue(paymentFailureOrder);
     mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
-    prismaMock.order.update.mockResolvedValue({
-      ...paymentFailureOrder,
-      status: OrderStatus.PAYMENT_FAILURE,
-    });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     await listener.onMessage({ ...baseEventData, cnt: 2 }, mockMsg);
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "PAYMENT_FAILURE" }),
       }),
@@ -183,17 +183,14 @@ describe("PaymentFailureExpirationCompleteListener", () => {
       totalQuantity: new Prisma.Decimal(20),
     });
     mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
-    prismaMock.order.update.mockResolvedValue({
-      ...paymentFailureOrder,
-      status: OrderStatus.PARTIAL_FILLED_PAYMENT_FAILURE,
-    });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     await listener.onMessage(
       { ...baseEventData, matchedQuantity: 10 },
       mockMsg,
     );
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: "PARTIAL_FILLED_PAYMENT_FAILURE",
@@ -203,11 +200,38 @@ describe("PaymentFailureExpirationCompleteListener", () => {
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
   });
 
-  it("should still ack even after cnt=3 exhaustion (admin-log path)", async () => {
+  // ─── OCC version check ────────────────────────────────────────────────────
+  it("should include version in where clause for optimistic concurrency", async () => {
     prismaMock.order.findUnique.mockResolvedValue(paymentFailureOrder);
+    mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
-    await listener.onMessage({ ...baseEventData, cnt: 4 }, mockMsg);
+    await listener.onMessage(
+      { ...baseEventData, matchedQuantity: 10 },
+      mockMsg,
+    );
+
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "order-1", version: 0 }),
+        data: expect.objectContaining({ version: { increment: 1 } }),
+      }),
+    );
+  });
+
+  it("should ack and return early on OCC version conflict (count=0)", async () => {
+    prismaMock.order.findUnique.mockResolvedValue(paymentFailureOrder);
+    mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
+    // Concurrent update won — this instance should back off
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+
+    await listener.onMessage(
+      { ...baseEventData, matchedQuantity: 10 },
+      mockMsg,
+    );
 
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
+    // No publish should happen since update was skipped
+    expect(natsWrapper.client.publish as jest.Mock).not.toHaveBeenCalled();
   });
 });

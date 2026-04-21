@@ -2,6 +2,7 @@ import { PaymentFailureListener } from "./events/listeners/payment-failure-liste
 import { SellPaymentFailureListener } from "./events/listeners/sell-payment-failure-listener";
 import { TradeOrderCreatedListener } from "./events/listeners/TradeOrderCreated-listener";
 import { natsWrapper } from "./natswrapper";
+import { expirationQueue, expirationQueuee, expirationQueueee } from "./queues/expiration-queue";
 
 const start = async () => {
   if (!process.env.NATS_CLIENT_ID) {
@@ -26,7 +27,12 @@ const start = async () => {
     });
 
     process.on("SIGINT", () => natsWrapper.client.close());
-    process.on("SIGTERM", () => natsWrapper.client.close());
+    process.on("SIGTERM", async () => {
+        await expirationQueue.close();
+        await expirationQueuee.close();
+        await expirationQueueee.close();
+        natsWrapper.client.close();
+    });
 
     new TradeOrderCreatedListener(natsWrapper.client).listen();
     new PaymentFailureListener(natsWrapper.client).listen();
