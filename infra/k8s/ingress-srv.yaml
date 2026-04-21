@@ -52,3 +52,10 @@ spec:
                 name: tradeengine-srv
                 port:
                   number: 3000
+          - path: /?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: client-srv
+                port:
+                  number: 3000
