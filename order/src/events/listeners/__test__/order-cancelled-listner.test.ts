@@ -29,7 +29,7 @@ const pendingOrder = {
   type: OrderType.BUY,
   status: OrderStatus.PENDING,
   totalQuantity: new Prisma.Decimal(10),
-  matchedQuantity: null,
+  matchedQuantity: new Prisma.Decimal(0),
   price: new Prisma.Decimal(2000),
   resolved: new Prisma.Decimal(0),
   expiresAt: new Date(),
@@ -56,7 +56,7 @@ describe("OrderCancelledListener", () => {
     );
 
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
-    expect(prismaMock.order.update).not.toHaveBeenCalled();
+    expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     expect(mockedAxios).not.toHaveBeenCalled();
   });
 
@@ -73,7 +73,7 @@ describe("OrderCancelledListener", () => {
     );
 
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
-    expect(prismaMock.order.update).not.toHaveBeenCalled();
+    expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     expect(mockedAxios).not.toHaveBeenCalled();
   });
 
@@ -89,7 +89,7 @@ describe("OrderCancelledListener", () => {
     );
 
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
-    expect(prismaMock.order.update).not.toHaveBeenCalled();
+    expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
     expect(mockedAxios).not.toHaveBeenCalled();
   });
 
@@ -99,10 +99,9 @@ describe("OrderCancelledListener", () => {
       ...pendingOrder,
       matchedQuantity: null,
     });
-    prismaMock.order.update.mockResolvedValue({
-      ...pendingOrder,
-      status: OrderStatus.EXPIRED,
-    });
+    
+    // Prisma's updateMany returns a BatchPayload ({ count: number })
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
     await listener.onMessage(
@@ -110,7 +109,7 @@ describe("OrderCancelledListener", () => {
       mockMsg,
     );
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: "EXPIRED" } }),
     );
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
@@ -121,10 +120,9 @@ describe("OrderCancelledListener", () => {
       ...pendingOrder,
       matchedQuantity: new Prisma.Decimal(0),
     });
-    prismaMock.order.update.mockResolvedValue({
-      ...pendingOrder,
-      status: OrderStatus.EXPIRED,
-    });
+    
+    // Prisma's updateMany returns a BatchPayload ({ count: number })
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
     await listener.onMessage(
@@ -132,7 +130,7 @@ describe("OrderCancelledListener", () => {
       mockMsg,
     );
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: "EXPIRED" } }),
     );
   });
@@ -142,10 +140,9 @@ describe("OrderCancelledListener", () => {
       ...pendingOrder,
       matchedQuantity: new Prisma.Decimal(5),
     });
-    prismaMock.order.update.mockResolvedValue({
-      ...pendingOrder,
-      status: OrderStatus.PARTIAL_EXPIRED,
-    });
+    
+    // Prisma's updateMany returns a BatchPayload ({ count: number })
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
     await listener.onMessage(
@@ -153,7 +150,7 @@ describe("OrderCancelledListener", () => {
       mockMsg,
     );
 
-    expect(prismaMock.order.update).toHaveBeenCalledWith(
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: "PARTIAL_EXPIRED" } }),
     );
     expect(mockMsg.ack).toHaveBeenCalledTimes(1);
@@ -162,10 +159,9 @@ describe("OrderCancelledListener", () => {
   // ─── Wallet settle call ────────────────────────────────────────────────────
   it("should call settle-money with settleamount=0 and correct releaseAmount and userID", async () => {
     prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
-    prismaMock.order.update.mockResolvedValue({
-      ...pendingOrder,
-      status: OrderStatus.EXPIRED,
-    });
+    
+    // Prisma's updateMany returns a BatchPayload ({ count: number })
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: { success: true }, status: 201 });
 
     await listener.onMessage(
@@ -185,13 +181,10 @@ describe("OrderCancelledListener", () => {
     );
   });
 
-  // ─── Settle failure — still acks (wallet failure on cancel is logged, not retried) ──
   it("should ack even when settle-money returns 500 (log and move on)", async () => {
     prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
-    prismaMock.order.update.mockResolvedValue({
-      ...pendingOrder,
-      status: OrderStatus.EXPIRED,
-    });
+    
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     mockedAxios.mockResolvedValueOnce({ data: {}, status: 500 });
 
     await listener.onMessage(

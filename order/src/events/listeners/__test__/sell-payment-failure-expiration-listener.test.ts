@@ -32,7 +32,7 @@ const baseOrder = {
   matchedQuantity: new Prisma.Decimal(5),
   price: new Prisma.Decimal(2000),
   resolved: new Prisma.Decimal(0),
-  version :0,
+  version: 0,
   expiresAt: new Date(),
   createdAt: new Date(),
   updatedAt: new Date(),

@@ -15,6 +15,7 @@ export const buy = async (
   quantity: number,
   price?: number,
 ) => {
+  // console.log(price);
   if (!price) {
     const { data: stockprice, status: stockstatus } = await callService(
       `http://stock-srv:3000/api/stocks/internal-symbol?symbol=${encodeURIComponent(symbol)}`,

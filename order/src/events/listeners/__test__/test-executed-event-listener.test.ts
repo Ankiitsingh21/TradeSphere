@@ -20,7 +20,6 @@ import {
   OrderType,
 } from "../../../generated/prisma/client";
 import { Message } from "node-nats-streaming";
-import { version } from "node:os";
 
 const mockMsg = { ack: jest.fn() } as unknown as Message;
 
@@ -31,7 +30,7 @@ const basePendingOrder = {
   type: OrderType.BUY,
   status: OrderStatus.PENDING,
   totalQuantity: new Prisma.Decimal(10),
-  matchedQuantity: null,
+  matchedQuantity: new Prisma.Decimal(0),
   price: new Prisma.Decimal(2000),
   resolved: new Prisma.Decimal(0),
   expiresAt: new Date(Date.now() + 60000),
