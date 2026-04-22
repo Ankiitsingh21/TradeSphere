@@ -9,8 +9,39 @@ import { createConrtoller } from "../../controller/create-stock-controller";
 import { updateStock } from "../../controller/update-stock-controller";
 import { toggleMarketController } from "../../controller/update-status-market";
 import isMarketOpen from "../../middleware/isMarketOpen";
+import { sendSseHeartbeat, sseClients } from "../../sse/sse-manager";
 
 const router = express.Router();
+
+router.get("/stream", (req: Request, res: Response) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+
+  sseClients.add(res);
+  res.write(": connected\n\n");
+
+  const heartbeatInterval = setInterval(() => {
+    if (!sseClients.has(res)) {
+      clearInterval(heartbeatInterval);
+      return;
+    }
+
+    sendSseHeartbeat(res);
+  }, 30_000);
+
+  const cleanup = () => {
+    clearInterval(heartbeatInterval);
+    sseClients.delete(res);
+  };
+
+  req.on("close", cleanup);
+  req.on("error", cleanup);
+  res.on("close", cleanup);
+  res.on("error", cleanup);
+});
 
 // router.get(
 //   "/fetch-nse",

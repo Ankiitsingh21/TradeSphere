@@ -20,6 +20,20 @@ export interface Stock {
   id: string;
   symbol: string;
   price: number;
+  previousPrice?: number;
+  updatedAt?: string;
+}
+
+export interface StockPriceStreamUpdate {
+  symbol: string;
+  price: number;
+  previousPrice: number;
+  updatedAt: string;
+}
+
+export interface StockStreamStatus {
+  connected: boolean;
+  updatedAt: string;
 }
 
 export interface WalletBalance {

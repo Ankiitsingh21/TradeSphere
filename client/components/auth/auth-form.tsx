@@ -56,91 +56,95 @@ export function AuthForm({ mode }: AuthFormProps) {
   };
 
   return (
-    <div className="relative w-full max-w-[420px]">
-      <div className="pointer-events-none absolute -left-20 -top-20 h-56 w-56 rounded-full bg-cyan-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-20 -right-14 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
+    <div className="flex min-h-screen items-center justify-center w-full">
+      <div className="w-full max-w-[420px] mx-auto relative">
+        <div className="pointer-events-none absolute -left-20 -top-20 h-56 w-56 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -right-14 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
 
-      <Card className="relative border-border/70 bg-slate-950/75">
-        <CardHeader className="space-y-3">
-          <div className="flex items-center gap-2 text-primary">
-            <Bolt className="h-5 w-5" />
-            <p className="font-display text-base font-semibold">TradeSphere</p>
-          </div>
-          <CardTitle className="text-xl">
-            {isSignIn
-              ? "Sign in to your terminal"
-              : "Create your trading account"}
-          </CardTitle>
-          <CardDescription>
-            {isSignIn
-              ? "Access live market data, order execution and wallet controls."
-              : "Set up your account and start placing market and limit orders."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="trader@sphere.dev"
-                required
-                autoComplete="email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={4}
-                maxLength={20}
-                placeholder="••••••••"
-                required
-                autoComplete={isSignIn ? "current-password" : "new-password"}
-              />
-              <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Session secured by httpOnly JWT cookie
+        <Card className="relative border-border/70 bg-slate-950/75">
+          <CardHeader className="space-y-3">
+            <div className="flex items-center gap-2 text-primary">
+              <Bolt className="h-5 w-5" />
+              <p className="font-display text-base font-semibold">
+                TradeSphere
               </p>
             </div>
+            <CardTitle className="text-xl">
+              {isSignIn
+                ? "Sign in to your terminal"
+                : "Create your trading account"}
+            </CardTitle>
+            <CardDescription>
+              {isSignIn
+                ? "Access live market data, order execution and wallet controls."
+                : "Set up your account and start placing market and limit orders."}
+            </CardDescription>
+          </CardHeader>
 
-            <Button
-              type="submit"
-              className="w-full justify-center gap-1"
-              disabled={activeMutation.isPending || !email || !password}
-            >
-              {activeMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Authenticating...
-                </>
-              ) : (
-                <>
-                  {isSignIn ? "Sign In" : "Create Account"}
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </form>
+          <CardContent>
+            <form onSubmit={submit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="trader@sphere.dev"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  minLength={4}
+                  maxLength={20}
+                  placeholder="••••••••"
+                  required
+                  autoComplete={isSignIn ? "current-password" : "new-password"}
+                />
+                <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Session secured by httpOnly JWT cookie
+                </p>
+              </div>
 
-          <div className="mt-5 text-center text-sm text-muted-foreground">
-            {isSignIn ? "New to TradeSphere?" : "Already have an account?"}{" "}
-            <Link
-              href={isSignIn ? "/auth/sign-up" : "/auth/sign-in"}
-              className="font-medium text-primary hover:underline"
-            >
-              {isSignIn ? "Create one" : "Sign in"}
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+              <Button
+                type="submit"
+                className="w-full justify-center gap-1"
+                disabled={activeMutation.isPending || !email || !password}
+              >
+                {activeMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Authenticating...
+                  </>
+                ) : (
+                  <>
+                    {isSignIn ? "Sign In" : "Create Account"}
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-5 text-center text-sm text-muted-foreground">
+              {isSignIn ? "New to TradeSphere?" : "Already have an account?"}{" "}
+              <Link
+                href={isSignIn ? "/auth/sign-up" : "/auth/sign-in"}
+                className="font-medium text-primary hover:underline"
+              >
+                {isSignIn ? "Create one" : "Sign in"}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -9,6 +9,6 @@ export function useStocksQuery(enabled = true) {
     queryKey: queryKeys.stocks,
     queryFn: fetchStocks,
     enabled,
-    refetchInterval: 5_000,
+    refetchInterval: 30_000,
   });
 }

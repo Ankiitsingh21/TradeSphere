@@ -4,7 +4,6 @@ import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { fetchPortfolio } from "@/lib/api/portfolio";
-import { fetchStocks } from "@/lib/api/stocks";
 import { fetchWalletBalance } from "@/lib/api/wallet";
 import { isPendingOrder } from "@/lib/order-status";
 import {
@@ -12,13 +11,13 @@ import {
   getPositionQuantity,
 } from "@/lib/portfolio-metrics";
 import { queryKeys } from "@/lib/query-keys";
-import type { OrderStatus } from "@/lib/types";
+import type { OrderStatus, Stock } from "@/lib/types";
 import { useOrderStore } from "@/lib/order-store";
+import { useStockStream } from "@/hooks/use-stock-stream";
 
 interface Snapshot {
   wallet: Awaited<ReturnType<typeof fetchWalletBalance>>;
   portfolio: Awaited<ReturnType<typeof fetchPortfolio>>;
-  stocks: Awaited<ReturnType<typeof fetchStocks>>;
   now: number;
 }
 
@@ -60,6 +59,8 @@ export function usePendingOrderPoller() {
   const orders = useOrderStore((state) => state.orders);
   const patchOrder = useOrderStore((state) => state.patchOrder);
 
+  useStockStream();
+
   const pendingOrders = useMemo(
     () => orders.filter((order) => isPendingOrder(order.status)),
     [orders],
@@ -71,16 +72,14 @@ export function usePendingOrderPoller() {
       pendingOrders.map((order) => `${order.id}:${order.status}`),
     ],
     queryFn: async (): Promise<Snapshot> => {
-      const [wallet, portfolio, stocks] = await Promise.all([
+      const [wallet, portfolio] = await Promise.all([
         fetchWalletBalance(),
         fetchPortfolio(),
-        fetchStocks(),
       ]);
 
       return {
         wallet,
         portfolio,
-        stocks,
         now: Date.now(),
       };
     },
@@ -99,9 +98,9 @@ export function usePendingOrderPoller() {
 
     queryClient.setQueryData(queryKeys.walletBalance, snapshot.wallet);
     queryClient.setQueryData(queryKeys.portfolio, snapshot.portfolio);
-    queryClient.setQueryData(queryKeys.stocks, snapshot.stocks);
+    const stocks = queryClient.getQueryData<Stock[]>(queryKeys.stocks) ?? [];
 
-    const priceMap = buildStockPriceMap(snapshot.stocks);
+    const priceMap = buildStockPriceMap(stocks);
 
     for (const order of pendingOrders) {
       const isExpired =

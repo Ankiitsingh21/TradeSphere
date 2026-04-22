@@ -6,13 +6,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { AlertTriangle, BarChart3, Clock3, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 
-import { OrderForm } from "@/components/orders/order-form";
 import { OrdersTable } from "@/components/orders/orders-table";
 import { PortfolioTable } from "@/components/portfolio/portfolio-table";
 import { StatCard } from "@/components/common/stat-card";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Topbar } from "@/components/layout/topbar";
+import { StockDetailModal } from "@/components/stocks/stock-detail-modal";
 import { StocksTable } from "@/components/stocks/stocks-table";
 import { WalletActions } from "@/components/wallet/wallet-actions";
 import {
@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePlaceOrderMutation } from "@/hooks/mutations/use-place-order";
 import { useSignOutMutation } from "@/hooks/mutations/use-sign-out";
 import { useWalletMutations } from "@/hooks/mutations/use-wallet-mutations";
 import { usePendingOrderPoller } from "@/hooks/use-pending-order-poller";
@@ -32,7 +31,7 @@ import { useTerminalData } from "@/hooks/use-terminal-data";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 import { getPageTitle } from "@/lib/navigation";
 import { filterOrdersByStatus } from "@/lib/order-metrics";
-import type { User } from "@/lib/types";
+import type { Stock, User } from "@/lib/types";
 
 interface DashboardShellProps {
   user: User;
@@ -45,6 +44,8 @@ export function DashboardShell({ user }: DashboardShellProps) {
   const router = useRouter();
 
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("ALL");
+  const [selectedStockForModal, setSelectedStockForModal] =
+    useState<Stock | null>(null);
 
   const {
     wallet,
@@ -59,7 +60,6 @@ export function DashboardShell({ user }: DashboardShellProps) {
     refetchAll,
   } = useTerminalData(true);
 
-  const placeOrderMutation = usePlaceOrderMutation();
   const signOutMutation = useSignOutMutation();
   const { addMoneyMutation, withdrawMoneyMutation } = useWalletMutations();
 
@@ -71,8 +71,6 @@ export function DashboardShell({ user }: DashboardShellProps) {
     () => filterOrdersByStatus(orders, orderFilter),
     [orderFilter, orders],
   );
-
-  const spotlightStock = stocks[0];
 
   return (
     <div className="relative min-h-screen pb-24 lg:pb-6">
@@ -131,16 +129,7 @@ export function DashboardShell({ user }: DashboardShellProps) {
           </motion.section>
 
           <section className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
-            <div className="xl:col-span-4">
-              <OrderForm
-                stocks={stocks}
-                defaultSymbol={spotlightStock?.symbol}
-                onSubmit={(payload) => placeOrderMutation.mutate(payload)}
-                submitting={placeOrderMutation.isPending}
-              />
-            </div>
-
-            <div className="space-y-4 xl:col-span-8">
+            <div className="space-y-4 xl:col-span-12">
               <Card>
                 <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -231,6 +220,7 @@ export function DashboardShell({ user }: DashboardShellProps) {
                         `/markets?symbol=${encodeURIComponent(stock.symbol)}`,
                       );
                     }}
+                    onTrade={(stock) => setSelectedStockForModal(stock)}
                   />
                 </ScrollArea>
               </CardContent>
@@ -284,6 +274,14 @@ export function DashboardShell({ user }: DashboardShellProps) {
             </Link>
             .
           </div>
+
+          <StockDetailModal
+            stock={selectedStockForModal}
+            onClose={() => setSelectedStockForModal(null)}
+            onOrderPlaced={() => {
+              refetchAll();
+            }}
+          />
         </main>
       </div>
 

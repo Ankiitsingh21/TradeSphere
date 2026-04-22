@@ -62,10 +62,15 @@ export function mapStock(input: unknown): Stock {
     return { id: "", symbol: "", price: 0 };
   }
 
+  const price = toNumber(input.price);
+  const previousPrice = toNumber(input.previousPrice, price);
+
   return {
     id: getString(input.id),
     symbol: getString(input.symbol).toUpperCase(),
-    price: toNumber(input.price),
+    price,
+    previousPrice,
+    updatedAt: getString(input.updatedAt),
   };
 }
 
