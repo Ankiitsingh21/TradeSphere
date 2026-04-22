@@ -1,13 +1,16 @@
-export default {
+/** @type {import("next").NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  output: "standalone",
   turbopack: {},
-  webpack: (config) => {
-    return {
-      ...config,
-      watchOptions: {
-        ...config.watchOptions,
-        poll: 300,
-      },
-    };
-  },
-  allowedDevOrigins: ["ticketing.dev"],
+  webpack: (config) => ({
+    ...config,
+    watchOptions: {
+      ...config.watchOptions,
+      poll: 300,
+    },
+  }),
+  allowedDevOrigins: ["sphere.dev"],
 };
+
+export default nextConfig;

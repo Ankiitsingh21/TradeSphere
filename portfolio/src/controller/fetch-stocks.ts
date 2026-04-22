@@ -6,10 +6,15 @@ import { get } from "../services/fetch-stocks";
 export const fetchStocks = async (req: Request, res: Response) => {
   try {
     const userID = req.currentUser!.id;
-    const { symbol } = req.body;
+    // const { symbol } = req.body;
+    let symboll ;
+    if(req.body){
+      const {symbol} = req.body;
+      symboll=symbol
+    }
     let stock;
-    if (symbol) {
-      stock = await get(userID, symbol);
+    if (symboll) {
+      stock = await get(userID, symboll);
     } else {
       stock = await get(userID);
     }

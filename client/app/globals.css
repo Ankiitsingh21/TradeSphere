@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 214 44% 7%;
+  --foreground: 216 100% 95%;
+
+  --muted: 217 28% 15%;
+  --muted-foreground: 212 27% 72%;
+
+  --popover: 219 38% 10%;
+  --popover-foreground: 214 100% 94%;
+
+  --card: 217 37% 10%;
+  --card-foreground: 215 95% 94%;
+
+  --border: 216 33% 23%;
+  --input: 216 33% 20%;
+
+  --primary: 196 100% 52%;
+  --primary-foreground: 210 100% 8%;
+
+  --secondary: 218 36% 16%;
+  --secondary-foreground: 212 95% 90%;
+
+  --accent: 190 87% 34%;
+  --accent-foreground: 190 100% 93%;
+
+  --destructive: 357 93% 61%;
+  --destructive-foreground: 0 0% 98%;
+
+  --success: 142 76% 42%;
+  --success-foreground: 137 100% 8%;
+
+  --warning: 43 96% 56%;
+  --warning-foreground: 24 85% 8%;
+
+  --info: 201 97% 48%;
+  --info-foreground: 216 100% 10%;
+
+  --ring: 196 100% 55%;
+  --radius: 0.75rem;
+}
+
+* {
+  @apply border-border;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-sans), sans-serif;
+  background:
+    radial-gradient(
+      circle at 5% 10%,
+      rgba(34, 211, 238, 0.18),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 95% 0%,
+      rgba(59, 130, 246, 0.12),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at 50% 100%,
+      rgba(20, 184, 166, 0.08),
+      transparent 30%
+    ),
+    #070c15;
+  color: hsl(var(--foreground));
+}
+
+.font-display {
+  font-family: var(--font-display), sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), monospace;
+}
+
+.glass-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(15, 25, 42, 0.9) 0%,
+    rgba(10, 18, 32, 0.78) 55%,
+    rgba(7, 13, 25, 0.88) 100%
+  );
+  backdrop-filter: blur(12px);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.35) rgba(10, 17, 30, 0.5);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(10, 17, 30, 0.45);
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.4);
+  border-radius: 9999px;
+}
+
+.grid-glow {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at center, black 45%, transparent 85%);
+}
