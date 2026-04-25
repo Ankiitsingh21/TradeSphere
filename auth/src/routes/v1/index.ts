@@ -4,6 +4,7 @@ import { body } from "express-validator";
 import { currentUser, validateRequest } from "@showsphere/common";
 import { signOut } from "../../controller/sign-out-controller";
 import { SignIn } from "../../controller/sign-in-controller";
+import { User } from "../../models/user";
 
 const router = express.Router();
 
@@ -22,8 +23,18 @@ router.post(
 
 router.post("/sign-out", signOut);
 
-router.get("/current-user", currentUser, (req, res) => {
-  res.send({ currentUser: req.currentUser || null });
+router.get("/current-user", currentUser, async (req: Request, res: Response) => {
+  if (!req.currentUser) {
+    return res.send({ currentUser: null });
+  }
+
+  const user = await User.findById(req.currentUser.id);
+  if (!user) {
+    req.session = null;
+    return res.send({ currentUser: null });
+  }
+
+  res.send({ currentUser: req.currentUser });
 });
 
 router.post(
@@ -39,11 +50,9 @@ router.post(
   SignIn,
 );
 
-
-router.get('/health',async (req:Request,res:Response) => {
-
+router.get("/health", async (req: Request, res: Response) => {
   const date = new Date();
-  res.send({date});
+  res.send({ date });
 });
 
 export default router;

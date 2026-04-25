@@ -54,17 +54,12 @@ export function StockDetailModal({
     gcTime: 0,
   });
 
-  const { data: streamStatusData } = useQuery({
-    queryKey: queryKeys.stockStreamStatus,
-    enabled: open,
-    initialData: queryClient.getQueryData<StockStreamStatus>(
-      queryKeys.stockStreamStatus,
-    ) ?? { connected: false, updatedAt: new Date().toISOString() },
-  });
+  const streamStatus = queryClient.getQueryData<StockStreamStatus>(
+  queryKeys.stockStreamStatus,
+);
 
-  const streamStatus = streamStatusData?.connected ?? false;
 
-  const liveFeedConnected = streamStatus;
+  const liveFeedConnected = streamStatus?.connected ?? false;
   const currentPrice = latestStock?.price ?? 0;
   const previousPrice = latestStock?.previousPrice ?? currentPrice;
   const change = currentPrice - previousPrice;

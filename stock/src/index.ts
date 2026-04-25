@@ -3,23 +3,14 @@ import { connectDB, prisma } from "./config/db";
 import { natsWrapper } from "./natswrapper";
 import { marketcreate } from "./services/create-market";
 import { seed } from "./services/seed-stocks";
+import { TradeExecutedStockListener } from "./events/listeners/trade-executed-listener";
 
 const start = async () => {
-  if (!process.env.JWT_KEY) {
-    throw new Error("JWT_KEY must be defined");
-  }
-  if (!process.env.DATABASE_URL) {
-    throw new Error("incorrect database url");
-  }
-  if (!process.env.NATS_CLIENT_ID) {
-    throw new Error("NATS_CLIENT_ID is incorrect");
-  }
-  if (!process.env.NATS_CLUSTER_ID) {
-    throw new Error("NATS_CLUSTER_ID is incorrect");
-  }
-  if (!process.env.NATS_URL) {
-    throw new Error("NATS_URL is incorrect");
-  }
+  if (!process.env.JWT_KEY) throw new Error("JWT_KEY must be defined");
+  if (!process.env.DATABASE_URL) throw new Error("incorrect database url");
+  if (!process.env.NATS_CLIENT_ID) throw new Error("NATS_CLIENT_ID is incorrect");
+  if (!process.env.NATS_CLUSTER_ID) throw new Error("NATS_CLUSTER_ID is incorrect");
+  if (!process.env.NATS_URL) throw new Error("NATS_URL is incorrect");
 
   await connectDB();
 
@@ -37,6 +28,8 @@ const start = async () => {
 
     process.on("SIGINT", () => natsWrapper.client.close());
     process.on("SIGTERM", () => natsWrapper.client.close());
+
+    new TradeExecutedStockListener(natsWrapper.client).listen();
   } catch (error) {
     console.error("NATS connection failed, exiting", error);
     process.exit(1);

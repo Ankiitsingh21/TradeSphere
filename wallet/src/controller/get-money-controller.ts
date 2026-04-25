@@ -1,16 +1,24 @@
-import { BadRequestError, CustomError } from "@showsphere/common";
+import { CustomError } from "@showsphere/common";
 import { Request, Response } from "express";
 import { checkbalance } from "../services/checkBalance";
+import { createwallet } from "../services/createWallet";
 
 export const getMoney = async (req: Request, res: Response) => {
   try {
     const userID = req.currentUser!.id;
 
-    const balance = await checkbalance(userID);
+    let balance = null;
+
+    try {
+      balance = await checkbalance(userID);
+    } catch {
+      balance = await createwallet(userID);
+    }
+
     return res.status(201).json({
       success: true,
       balance: balance,
-      message: "Successfully fetch  a money from wallet",
+      message: "Successfully fetch a money from wallet",
     });
   } catch (error) {
     if (error instanceof CustomError) {
@@ -23,7 +31,7 @@ export const getMoney = async (req: Request, res: Response) => {
     console.log(error);
     return res.status(400).send({
       success: false,
-      message: "Something went wrong at controller layer ",
+      message: "Something went wrong at controller layer",
       errors: error,
     });
   }
