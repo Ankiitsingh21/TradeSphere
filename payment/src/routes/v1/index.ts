@@ -16,8 +16,8 @@ router.post(
   requireAuth,
   [
     body('amount')
-      .isFloat({ gt: 0 })
-      .withMessage('Amount must be a positive number'),
+      .isFloat({ gt: 0, max: 500000 })
+      .withMessage('Amount must be between ₹1 and ₹5,00,000'),
   ],
   validateRequest,
   initiatePayment,

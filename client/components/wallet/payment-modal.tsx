@@ -80,8 +80,6 @@ function StripePaymentForm({
       return;
     }
 
-    // Payment succeeded — webhook will credit wallet
-    // Show success and close. Wallet balance will update via 10s polling
     toast.success(`₹${amount.toLocaleString('en-IN')} payment initiated! Wallet will be credited shortly.`);
     onSuccess();
   };
@@ -153,6 +151,12 @@ export function PaymentModal() {
       return;
     }
 
+    // ✅ Added as per Claude suggestion
+    if (value > 500000) {
+      toast.error('Maximum top-up is ₹5,00,000 per transaction');
+      return;
+    }
+
     const result = await initiateMutation.mutateAsync(value);
     setClientSecret(result.clientSecret);
     setStep('payment');
@@ -163,11 +167,10 @@ export function PaymentModal() {
     setStep('amount');
     setAmount('');
     setClientSecret(null);
-    // Wallet balance will auto-update via existing 10s polling
-    // But invalidate immediately for better UX
+
     setTimeout(() => {
       queryClient.invalidateQueries({ queryKey: queryKeys.walletBalance });
-    }, 3000); // Wait 3s for webhook to process
+    }, 3000);
   }, [queryClient]);
 
   const handleClose = useCallback((isOpen: boolean) => {
@@ -217,7 +220,6 @@ export function PaymentModal() {
               <p className="text-xs text-muted-foreground">Minimum ₹100</p>
             </div>
 
-            {/* Quick amount buttons */}
             <div className="grid grid-cols-4 gap-2">
               {[1000, 5000, 10000, 25000].map((preset) => (
                 <button
