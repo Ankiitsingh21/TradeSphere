@@ -61,7 +61,7 @@ export function DashboardShell({ user }: DashboardShellProps) {
   } = useTerminalData(true);
 
   const signOutMutation = useSignOutMutation();
-  const { addMoneyMutation, withdrawMoneyMutation } = useWalletMutations();
+  const {  withdrawMoneyMutation } = useWalletMutations();
 
   usePendingOrderPoller();
 
@@ -143,7 +143,6 @@ export function DashboardShell({ user }: DashboardShellProps) {
                     </CardDescription>
                   </div>
                   <WalletActions
-                    addMoneyMutation={addMoneyMutation}
                     withdrawMoneyMutation={withdrawMoneyMutation}
                   />
                 </CardHeader>

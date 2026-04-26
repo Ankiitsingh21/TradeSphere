@@ -74,3 +74,11 @@ build:
           manual:
             - src: '**/*.js'
               dest: .
+      - image: ankiitsingh21/payment
+        context: payment
+        docker:
+          dockerfile: Dockerfile
+        sync:
+          manual:
+            - src: 'src/**/*.ts'
+              dest: .

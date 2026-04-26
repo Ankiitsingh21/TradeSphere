@@ -1,5 +1,6 @@
 import { app } from "./app";
 import { connectDB } from "./config/db";
+import { PaymentCompletedListener } from "./events/listeners/payment-completed-listener";
 import { UserCreatedListener } from "./events/listeners/user-created-listener";
 import { natsWrapper } from "./natswrapper";
 
@@ -38,6 +39,7 @@ const start = async () => {
     process.on("SIGTERM", () => natsWrapper.client.close());
 
     new UserCreatedListener(natsWrapper.client).listen();
+    new PaymentCompletedListener(natsWrapper.client).listen();
   } catch (error) {
     console.error("NATS connection failed, exiting", error);
     process.exit(1);

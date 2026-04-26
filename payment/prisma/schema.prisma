@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum PaymentType {
+  TOPUP
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  userId                String
+  amount                Decimal       @db.Decimal(18, 2)
+  status                PaymentStatus @default(PENDING)
+  stripePaymentIntentId String        @unique
+  type                  PaymentType   @default(TOPUP)
+  version               Int           @default(0)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}

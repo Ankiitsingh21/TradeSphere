@@ -22,7 +22,7 @@ import type { User } from "@/lib/types";
 export function WalletPage({ user }: { user: User }) {
   const { wallet, isFetching, refetchAll } = useTerminalData(true);
   const signOutMutation = useSignOutMutation();
-  const { addMoneyMutation, withdrawMoneyMutation } = useWalletMutations();
+  const {  withdrawMoneyMutation } = useWalletMutations();
 
   usePendingOrderPoller();
 
@@ -66,7 +66,6 @@ export function WalletPage({ user }: { user: User }) {
               </CardDescription>
             </div>
             <WalletActions
-              addMoneyMutation={addMoneyMutation}
               withdrawMoneyMutation={withdrawMoneyMutation}
             />
           </CardHeader>

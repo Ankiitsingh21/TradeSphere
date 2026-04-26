@@ -7,7 +7,7 @@ import { TradeOrderCreated } from "../events/publishers/trade-order-created-even
 import { PaymentFailurePublisher } from "../events/publishers/payment-failure-publisher";
 import { Prisma } from "../generated/prisma/client";
 
-const EXPRIATION_WINDOW_SECOND = 10;
+const EXPRIATION_WINDOW_SECOND = 30;
 
 export const buy = async (
   userID: string,
