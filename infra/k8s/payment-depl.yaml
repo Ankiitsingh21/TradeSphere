@@ -41,11 +41,6 @@ spec:
                 secretKeyRef:
                   name: stripe-secret
                   key: STRIPE_WEBHOOK_SECRET
-            - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: stripe-secrett
-                  key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ---
 apiVersion: v1
 kind: Service
