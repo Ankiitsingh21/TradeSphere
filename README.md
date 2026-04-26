@@ -81,50 +81,50 @@ TradeSphere is a **production-grade microservices trading platform** that simula
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         KUBERNETES CLUSTER (k3d / k3s)                          │
+│                         KUBERNETES CLUSTER (k3d )                               │
 │                      NGINX Ingress  ─  sphere.dev                               │
-│                                                                                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
-│  │  CLIENT  │  │   AUTH   │  │  WALLET  │  │  ORDER   │  │  STOCK   │          │
-│  │ Next.js  │  │ Express  │  │ Express  │  │ Express  │  │ Express  │          │
-│  │  :3000   │  │  :3000   │  │  :3000   │  │  :3000   │  │  :3000   │          │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘          │
-│       │             │             │             │             │                  │
-│  ┌────▼─────┐  ┌────▼─────┐  ┌────▼─────┐  ┌────▼─────┐  ┌────▼─────┐          │
-│  │  React   │  │ MongoDB  │  │PostgreSQL│  │PostgreSQL│  │PostgreSQL│          │
-│  │  Query   │  │  (auth)  │  │ (wallet) │  │ (order)  │  │ (stock)  │          │
-│  │  Zustand │  └──────────┘  └──────────┘  └──────────┘  └──────────┘          │
-│  └──────────┘                                                                    │
-│                                                                                  │
-│  ┌──────────┐  ┌──────────┐                                                      │
-│  │ PAYMENT  │  │PORTFOLIO │                                                      │
-│  │ Express  │  │ Express  │                                                      │
-│  │  :3000   │  │  :3000   │                                                      │
-│  └────┬─────┘  └────┬─────┘                                                      │
-│       │             │                                                             │
-│  ┌────▼─────┐  ┌────▼─────┐                                                      │
-│  │PostgreSQL│  │PostgreSQL│                                                      │
-│  │(payment) │  │(portfolio│                                                      │
-│  └──────────┘  └──────────┘                                                      │
-│                                                                                  │
+│                                                                                 │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+│  │  CLIENT  │  │   AUTH   │  │  WALLET  │  │  ORDER   │  │  STOCK   │           │
+│  │ Next.js  │  │ Express  │  │ Express  │  │ Express  │  │ Express  │           │
+│  │  :3000   │  │  :3000   │  │  :3000   │  │  :3000   │  │  :3000   │           │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘           │
+│       │             │             │             │             │                 │
+│  ┌────▼─────┐  ┌────▼─────┐  ┌────▼─────┐  ┌────▼─────┐  ┌────▼─────┐           │
+│  │  React   │  │ MongoDB  │  │PostgreSQL│  │PostgreSQL│  │PostgreSQL│           │
+│  │  Query   │  │  (auth)  │  │ (wallet) │  │ (order)  │  │ (stock)  │           │
+│  │  Zustand │  └──────────┘  └──────────┘  └──────────┘  └──────────┘           │
+│  └──────────┘                                                                   │
+│                                                                                 │
+│  ┌──────────┐  ┌──────────┐                                                     │
+│  │ PAYMENT  │  │PORTFOLIO │                                                     │
+│  │ Express  │  │ Express  │                                                     │
+│  │  :3000   │  │  :3000   │                                                     │
+│  └────┬─────┘  └────┬─────┘                                                     │
+│       │             │                                                           │
+│  ┌────▼─────┐  ┌────▼─────┐                                                     │
+│  │PostgreSQL│  │PostgreSQL│                                                     │
+│  │(payment) │  │(portfolio│                                                     │
+│  └──────────┘  └──────────┘                                                     │
+│                                                                                 │
 │  ┌──────────────────────────────────────────────────────────────────────────┐   │
-│  │                      NATS STREAMING  (Event Bus)                          │   │
+│  │                      NATS STREAMING  (Event Bus)                         │   │
 │  │  UserCreated · BuyTrade · SellTrade · TradeExecuted                      │   │
 │  │  TradeOrderCreated · ExpirationComplete · OrderCancelled                 │   │
 │  │  PaymentFailure · SellPaymentFailure · StockPriceUpdated · Seed          │   │
 │  │  PaymentInitiated · PaymentCompleted                                     │   │
 │  └──────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                  │
+│                                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────────┐         │
-│  │  PORTFOLIO   │  │ TRADEENGINE  │  │          EXPIRATION             │         │
-│  │   Express    │  │   Express    │  │  Bull Queue  +  Redis           │         │
-│  │    :3000     │  │    :3000     │  │  3 Queues (order/pfail/sell)    │         │
+│  │  PORTFOLIO   │  │ TRADEENGINE  │  │          EXPIRATION            │         │
+│  │   Express    │  │   Express    │  │  Bull Queue  +  Redis          │         │
+│  │    :3000     │  │    :3000     │  │  3 Queues (order/pfail/sell)   │         │
 │  └──────┬───────┘  └──────┬───────┘  └────────────────────────────────┘         │
-│         │                 │                                                       │
-│  ┌──────▼───────┐  ┌──────▼───────┐                                              │
-│  │  PostgreSQL  │  │  PostgreSQL  │                                              │
-│  │ (portfolio)  │  │(tradeengine) │                                              │
-│  └──────────────┘  └──────────────┘                                              │
+│         │                 │                                                     │
+│  ┌──────▼───────┐  ┌──────▼───────┐                                             │
+│  │  PostgreSQL  │  │  PostgreSQL  │                                             │
+│  │ (portfolio)  │  │(tradeengine) │                                             │
+│  └──────────────┘  └──────────────┘                                             │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -186,7 +186,7 @@ total_balance = available_balance + locked_balance
 
 ---
 
-### 3. 💳 Payment Service *(new)*
+### 3. 💳 Payment Service
 **Runtime:** Node.js + Express + TypeScript  
 **Database:** PostgreSQL (via Prisma)  
 **Publishes:** `PaymentInitiated`, `PaymentCompleted`  
@@ -257,7 +257,7 @@ POST /api/orders/sell   → Verify holdings → call TradeEngine → credit/queu
      ├───────────────┬────────────────────┤
      │   SUCCESS     │  PAYMENT_FAILURE   │
      │               │ (wallet unreachable│
-     │  PARTIAL_FILLED│  → retry via Bull) │
+     │  PARTIAL_FILLED│  → retry via Bull)│
      │               └────────────────────┤
      │  EXPIRED      │ PARTIAL_EXPIRED    │
      │               │                    │
